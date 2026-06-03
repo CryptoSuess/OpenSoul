@@ -1,7 +1,7 @@
 // game.js — the conductor. Owns the world, the per-era entity layers, the
 // ghost, the loop and the state machine (title / playing / paused / won).
 
-import { ERAS, GHOST, MEMORY_LINES, ANCHORS_TO_WIN, TILE } from './constants.js';
+import { ERAS, GHOST, MEMORY_LINES, ENDING_LINES, ANCHORS_TO_WIN, TILE } from './constants.js';
 import { World } from './world.js';
 import { Ghost } from './player.js';
 import { Renderer } from './renderer.js';
@@ -13,7 +13,7 @@ import {
 } from './entities.js';
 import { initInput, consumePressed, isDown } from './input.js';
 
-const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, WIN: 3 };
+const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, ENDING: 4, WIN: 3 };
 
 export class Game {
   constructor(canvas, uiRoot, overlayEl) {
@@ -25,6 +25,7 @@ export class Game {
     this.state = STATE.TITLE;
     this.time = 0;
     this.shiftFx = 0;
+    this.endingFx = 0;
     this.lore = [];
     initInput(window);
     this._reset();
@@ -34,12 +35,16 @@ export class Game {
 
   _reset() {
     this.world = new World();
-    this.eraIndex = 2; // start in "The Long Quiet" — you wake in the ruins
+    // You wake in The Long Quiet (the ruins). Look it up by id so the start
+    // survives any reordering of the eras.
+    this.eraIndex = Math.max(0, ERAS.findIndex((e) => e.id === 'ruin'));
     this.layers = ERAS.map((_, i) => buildEraLayer(this.world, i));
     this.fragments = buildFragments(this.world);
     const sp = this.world.findSpawn();
     this.ghost = new Ghost(sp.x, sp.y);
     this.lore = [];
+    this.endingFx = 0;
+    this._ending = null;
     this.mapOpen = false;
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
@@ -84,11 +89,71 @@ export class Game {
     this.state = STATE.PLAY;
   }
 
+  // Begin the cinematic ending: build the script of lines to play (the memories
+  // you actually reclaimed, then the resolution beats), then let update() drive
+  // it. The ghost ascends, the world floods with warm light, and it resolves on
+  // the "AT REST" panel.
+  _beginEnding() {
+    if (this.state === STATE.ENDING || this.state === STATE.WIN) return;
+    this.state = STATE.ENDING;
+    this.ui.setHidden(true);
+    this.audio.ending();
+    const lines = [...this.lore, ...ENDING_LINES];
+    this._ending = {
+      t: 0,
+      lines,
+      idx: -1,
+      lineEvery: 2.7,    // seconds per line
+      startDelay: 1.2,   // let the light begin before the first line
+      done: false,
+    };
+  }
+
+  // Per-frame ending logic (called from update while state === ENDING).
+  _updateEnding(dt) {
+    const e = this._ending;
+    if (!e) return;
+    e.t += dt;
+
+    // warm light swells in over ~3.5s
+    this.endingFx = Math.min(1, this.endingFx + dt / 3.5);
+
+    // the ghost drifts upward, shedding light
+    this.ghost.vy -= 60 * dt;
+    this.ghost.x += this.ghost.vx * dt;
+    this.ghost.y += this.ghost.vy * dt;
+    this.ghost.vx *= 1 - 0.8 * dt;
+    if (Math.random() < 0.6) {
+      this.particles.spawn(
+        this.ghost.x + (Math.random() - 0.5) * 24,
+        this.ghost.y + (Math.random() - 0.5) * 24,
+        (Math.random() - 0.5) * 20, -40 - Math.random() * 40,
+        1.4, 3.5, [255, 244, 210]
+      );
+    }
+
+    // reveal the script one line at a time
+    const due = Math.floor((e.t - e.startDelay) / e.lineEvery);
+    if (due > e.idx && e.idx < e.lines.length - 1) {
+      e.idx = Math.min(due, e.lines.length - 1);
+      this.ui.showEndingLine(e.lines[e.idx]);
+    }
+
+    // once the last line has had its moment, fade to the AT REST panel
+    const finishAt = e.startDelay + e.lines.length * e.lineEvery + 1.4;
+    if (!e.done && e.t >= finishAt) {
+      e.done = true;
+      this.win();
+    }
+  }
+
   win() {
     this.state = STATE.WIN;
+    this.endingFx = 1;
     this.audio.win();
     this.ui.setHidden(true);
-    this.overlay.show(winHTML(this.ghost.fragments, this.lore.slice(-4)));
+    this.ui.hideEndingLine();
+    this.overlay.show(winHTML(this.ghost.fragments, ENDING_LINES));
   }
 
   _bindOverlayClicks(el) {
@@ -189,7 +254,7 @@ export class Game {
       this.ui.toastMsg('Anchor awakened in ' + this.era.name + '  ◆');
       this.ui.showNarrative('A piece of you settles into place, like a held breath finally let go.');
       if (this.ghost.anchors >= ANCHORS_TO_WIN) {
-        setTimeout(() => this.win(), 1600);
+        setTimeout(() => this._beginEnding(), 1600);
       }
     } else {
       this.ui.toastMsg('The Anchor stirs… (haunt again)');
@@ -250,7 +315,17 @@ export class Game {
     }
     if (consumePressed('confirm')) {
       if (this.state === STATE.TITLE) this.start();
+      else if (this.state === STATE.ENDING) this.win(); // skip to the panel
       else if (this.state === STATE.WIN) { this._reset(); this.start(); }
+    }
+
+    // The ending cutscene drives itself; a tap/space/haunt skips to the panel.
+    if (this.state === STATE.ENDING) {
+      if (consumePressed('haunt')) { this.win(); }
+      else this._updateEnding(dt);
+      this.particles.update(dt);
+      this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
+      return;
     }
 
     if (this.state !== STATE.PLAY) {
@@ -287,8 +362,8 @@ export class Game {
     r.drawEntities(this.layer, this.fragments, this.eraIndex, this.time, this.ghost);
     this.particles.draw(r.ctx, r.cam);
     r.drawGhost(this.ghost, this.time, this.era.accent);
-    r.postFx(this.eraIndex, this.ghost, this.shiftFx);
-    if (this.mapOpen) {
+    r.postFx(this.eraIndex, this.ghost, this.shiftFx, this.endingFx);
+    if (this.mapOpen && this.state === STATE.PLAY) {
       r.drawMinimap(this.world, this.layer, this.fragments, this.ghost, this.eraIndex);
     }
   }

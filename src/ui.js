@@ -27,6 +27,7 @@ export class UI {
       </div>
       <div id="toast"></div>
       <div id="narrative"><p id="narrative-text"></p></div>
+      <div id="ending-line"><p></p></div>
       <div id="hint">Q/E shift time · SHIFT phase · SPACE haunt · M map</div>
     `;
     this.energyFill = this.root.querySelector('#energy-fill');
@@ -38,6 +39,8 @@ export class UI {
     this.toast = this.root.querySelector('#toast');
     this.narrative = this.root.querySelector('#narrative');
     this.narrativeText = this.root.querySelector('#narrative-text');
+    this.endingLine = this.root.querySelector('#ending-line');
+    this.endingLineText = this.root.querySelector('#ending-line p');
     this.hint = this.root.querySelector('#hint');
 
     // build timeline pips
@@ -86,6 +89,24 @@ export class UI {
     this.narrative.classList.add('show');
     clearTimeout(this._narrTimer);
     this._narrTimer = setTimeout(() => this.narrative.classList.remove('show'), 6000);
+  }
+
+  // Cinematic ending line — larger, centered, slow cross-fade. The game's
+  // sequencer calls this once per beat; each new line replaces the last.
+  showEndingLine(text) {
+    // also clear any lingering in-world narrative popup
+    this.narrative.classList.remove('show');
+    this.endingLine.classList.add('show');
+    const p = this.endingLineText;
+    p.textContent = text;
+    // restart the per-line fade animation (it lives on the <p>)
+    p.classList.remove('play');
+    void p.offsetWidth;
+    p.classList.add('play');
+  }
+  hideEndingLine() {
+    this.endingLine.classList.remove('show');
+    this.endingLineText.classList.remove('play');
   }
 
   setHidden(hidden) {

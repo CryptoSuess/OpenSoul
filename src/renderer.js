@@ -43,6 +43,7 @@ export class Renderer {
 
   begin(eraIndex, time) {
     const ctx = this.ctx;
+    this.time = time; // available to draw helpers (e.g. ember flicker)
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const era = ERAS[eraIndex];
     ctx.fillStyle = era.sky;
@@ -250,6 +251,21 @@ export class Renderer {
       ctx.fillStyle = 'rgba(60,110,70,0.5)'; // moss
       ctx.fillRect(sx - 13, sy - 4, 9, 6);
       ctx.fillRect(sx + 2, sy - 4, 9, 6);
+    } else if (p.type === 'ember') {
+      // charred, broken rubble with a smouldering glow
+      ctx.fillStyle = '#2a1c14';
+      ctx.fillRect(sx - 10, sy - 8, 11, 10);
+      ctx.fillRect(sx + 1, sy - 12, 9, 14);
+      // glowing embers
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const flick = 0.55 + Math.sin(this.time * 9 + p.x) * 0.25;
+      this._glow(sx, sy - 4, 12 * flick, '#ff7a2a', 0.5);
+      ctx.fillStyle = '#ffb15a';
+      ctx.globalAlpha = flick;
+      ctx.fillRect(sx - 7, sy - 2, 3, 3);
+      ctx.fillRect(sx + 4, sy - 6, 2, 2);
+      ctx.restore();
     }
   }
 
@@ -390,13 +406,13 @@ export class Renderer {
     return `rgba(${r},${g},${b},${a})`;
   }
 
-  // Fog + vignette + optional time-shift ripple.
-  postFx(eraIndex, ghost, shiftFx) {
+  // Fog + vignette + optional time-shift ripple + ending wash.
+  postFx(eraIndex, ghost, shiftFx, endingFx = 0) {
     const ctx = this.ctx;
     const era = ERAS[eraIndex];
-    // colored fog
+    // colored fog (fades away as the ending light takes over)
     ctx.save();
-    ctx.fillStyle = `rgba(${era.fogColor},${era.fogStrength})`;
+    ctx.fillStyle = `rgba(${era.fogColor},${era.fogStrength * (1 - endingFx)})`;
     ctx.fillRect(0, 0, this.vw, this.vh);
     ctx.restore();
 
@@ -406,9 +422,27 @@ export class Renderer {
     const maxR = Math.hypot(this.vw, this.vh) * 0.6;
     const g = ctx.createRadialGradient(cx, cy, maxR * 0.35, cx, cy, maxR);
     g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, `rgba(0,0,0,${era.vignette})`);
+    g.addColorStop(1, `rgba(0,0,0,${era.vignette * (1 - endingFx)})`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, this.vw, this.vh);
+
+    // ending: a warm light rises from the ghost and floods the world to white
+    if (endingFx > 0) {
+      ctx.save();
+      const eg = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * (1.1 - endingFx * 0.4));
+      const core = Math.min(1, endingFx * 1.2);
+      eg.addColorStop(0, `rgba(255,248,224,${core})`);
+      eg.addColorStop(0.6, `rgba(255,236,200,${endingFx * 0.6})`);
+      eg.addColorStop(1, `rgba(255,230,190,0)`);
+      ctx.fillStyle = eg;
+      ctx.fillRect(0, 0, this.vw, this.vh);
+      // final flat wash to pure light at the very end
+      if (endingFx > 0.7) {
+        ctx.fillStyle = `rgba(255,250,238,${(endingFx - 0.7) / 0.3})`;
+        ctx.fillRect(0, 0, this.vw, this.vh);
+      }
+      ctx.restore();
+    }
 
     // time-shift ripple flash
     if (shiftFx > 0) {

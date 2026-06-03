@@ -67,6 +67,26 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;
 #narrative p{font-size:21px;font-style:italic;line-height:1.5;color:#eaf6ff;
   text-shadow:0 2px 20px #000,0 0 30px rgba(120,180,255,.5);}
 
+/* Ending cutscene line — warm, larger, slow cross-fade against the white wash */
+#ending-line{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  max-width:620px;text-align:center;opacity:0;pointer-events:none;z-index:9;
+  transition:opacity 1.1s ease, transform 1.1s ease;}
+#ending-line.show{opacity:1;}
+/* soft translucent plate so the line stays legible across the whole
+   dark -> warm-white transition */
+#ending-line p{font-size:25px;font-style:italic;line-height:1.55;margin:0;
+  display:inline-block;padding:14px 30px;border-radius:18px;opacity:0;
+  color:#fff4e2;background:rgba(24,16,10,0.5);
+  border:1px solid rgba(255,240,215,.18);backdrop-filter:blur(3px);
+  text-shadow:0 2px 16px rgba(0,0,0,.7);}
+#ending-line p.play{animation:endingFloat 2.7s ease forwards;}
+@keyframes endingFloat{
+  0%{opacity:0;transform:translateY(14px);}
+  18%{opacity:1;transform:translateY(0);}
+  78%{opacity:1;transform:translateY(0);}
+  100%{opacity:0;transform:translateY(-12px);}
+}
+
 #hint{position:absolute;right:18px;bottom:18px;font-size:11px;opacity:.7;
   letter-spacing:1px;text-shadow:0 1px 4px #000;transition:opacity .6s;}
 
@@ -116,7 +136,9 @@ button:active{transform:translateY(0);}
   .panel{padding:28px 24px;}
   .panel h1{font-size:38px;}
   #narrative p{font-size:17px;}
-  .pip{width:52px;}
+  #ending-line p{font-size:19px;}
+  .pip{width:44px;}
+  .pip-link{width:16px;}
   .pip label{display:none;}
   /* compact, single-line era banner so it clears the top-right buttons */
   #era-name{font-size:16px;letter-spacing:2px;white-space:nowrap;}

@@ -57,8 +57,10 @@ export class Audio {
   // Re-tune the drone to match an era's mood.
   setEra(eraIndex) {
     if (!this.ctx) return;
-    const roots = [110, 98, 82.4, 65.4]; // A2, G2, E2, C2 — descending, darker
-    const cutoff = [800, 700, 520, 360];
+    // verdant, stone, sundering, ruin, hollow — descending into darkness,
+    // with the Sundering a tense, slightly brighter (fire-lit) tone.
+    const roots = [110, 98, 87.3, 82.4, 65.4]; // A2, G2, F2, E2, C2
+    const cutoff = [800, 700, 600, 520, 360];
     const r = roots[eraIndex % roots.length];
     const t = this.ctx.currentTime;
     for (let i = 0; i < this.osc.length; i++) {
@@ -98,5 +100,12 @@ export class Audio {
   win() {
     [523, 659, 784, 1046].forEach((f, i) =>
       setTimeout(() => this._blip(f, 0.8, 'sine', 0.2), i * 180));
+  }
+  // Slow ascending swell for the ending cutscene.
+  ending() {
+    const notes = [261.6, 329.6, 392, 523.25, 659.3, 784, 1046.5];
+    notes.forEach((f, i) =>
+      setTimeout(() => this._blip(f, 1.6, 'sine', 0.15), i * 420));
+    setTimeout(() => this._blip(523.25, 3.2, 'triangle', 0.1), 200);
   }
 }
