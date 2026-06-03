@@ -1,0 +1,119 @@
+/* OpenSoul — UI styling. The canvas is the world; this is the soul's HUD. */
+:root{
+  --accent:#9fe8ff;
+  --gold:#fff2c0;
+  --ink:#cfe6f0;
+  --panel:rgba(10,14,22,0.82);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;overflow:hidden;background:#05060a;
+  font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;color:var(--ink);
+  -webkit-font-smoothing:antialiased;cursor:default;user-select:none;}
+#game{position:fixed;inset:0;display:block;}
+#ui{position:fixed;inset:0;pointer-events:none;}
+
+/* ---------- HUD ---------- */
+#hud{transition:opacity .6s ease;}
+#era-banner{position:absolute;top:18px;left:50%;transform:translateX(-50%);
+  text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.8);}
+#era-name{display:block;font-size:26px;letter-spacing:4px;font-weight:700;
+  color:#fff;}
+#era-blurb{display:block;font-size:13px;opacity:.75;margin-top:2px;font-style:italic;
+  letter-spacing:.5px;}
+#era-banner.flash{animation:flash 1.4s ease;}
+@keyframes flash{0%{opacity:0;transform:translateX(-50%) scale(1.08);}
+  20%{opacity:1;} 100%{opacity:1;transform:translateX(-50%) scale(1);}}
+
+#stats{position:absolute;left:18px;top:18px;width:220px;}
+.stat label{font-size:11px;letter-spacing:3px;opacity:.7;}
+.bar{height:12px;background:rgba(255,255,255,.10);border-radius:7px;overflow:hidden;
+  margin-top:3px;border:1px solid rgba(255,255,255,.12);}
+#energy-fill{height:100%;width:100%;border-radius:7px;
+  background:linear-gradient(90deg,#7be0ff,#b9a3ff);
+  box-shadow:0 0 12px rgba(150,200,255,.7);transition:width .12s linear;}
+#energy-fill.low{background:linear-gradient(90deg,#ff7a7a,#ffb36b);
+  animation:pulseLow .8s infinite;}
+@keyframes pulseLow{50%{opacity:.55;}}
+.stat-row{display:flex;justify-content:space-between;margin-top:10px;
+  font-size:15px;font-weight:700;text-shadow:0 1px 6px #000;}
+#frag-count{color:var(--gold);}
+#anchor-count{color:#9fc0ff;}
+
+#timeline{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:0;}
+.pip{display:flex;flex-direction:column;align-items:center;width:96px;}
+.pip span{width:14px;height:14px;border-radius:50%;background:rgba(255,255,255,.18);
+  border:2px solid rgba(255,255,255,.3);transition:all .3s;}
+.pip.active span{background:var(--accent);border-color:#fff;
+  box-shadow:0 0 14px var(--accent);transform:scale(1.35);}
+.pip.anchored span{background:var(--gold);border-color:#fff;box-shadow:0 0 14px var(--gold);}
+.pip label{font-size:10px;opacity:0;margin-top:5px;letter-spacing:1px;
+  transition:opacity .3s;white-space:nowrap;text-shadow:0 1px 4px #000;}
+.pip.active label{opacity:.9;}
+.pip-link{width:34px;height:2px;background:rgba(255,255,255,.18);margin-bottom:15px;}
+
+#toast{position:absolute;left:50%;bottom:80px;transform:translateX(-50%) translateY(10px);
+  background:var(--panel);padding:9px 18px;border-radius:20px;font-size:14px;
+  border:1px solid rgba(255,255,255,.12);opacity:0;transition:all .3s;
+  text-shadow:0 1px 4px #000;backdrop-filter:blur(4px);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+#narrative{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  max-width:560px;text-align:center;opacity:0;transition:opacity 1s ease;
+  pointer-events:none;}
+#narrative.show{opacity:1;}
+#narrative p{font-size:21px;font-style:italic;line-height:1.5;color:#eaf6ff;
+  text-shadow:0 2px 20px #000,0 0 30px rgba(120,180,255,.5);}
+
+#hint{position:absolute;right:18px;bottom:18px;font-size:11px;opacity:.7;
+  letter-spacing:1px;text-shadow:0 1px 4px #000;transition:opacity .6s;}
+
+/* ---------- Overlays ---------- */
+#overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(20,30,50,.55),rgba(2,3,6,.92));
+  z-index:10;backdrop-filter:blur(3px);}
+#overlay.show{display:flex;animation:fadeIn .6s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.panel{background:var(--panel);border:1px solid rgba(150,200,255,.18);
+  border-radius:18px;padding:40px 46px;max-width:720px;text-align:center;
+  box-shadow:0 20px 80px rgba(0,0,0,.6),inset 0 0 60px rgba(80,140,255,.05);}
+.panel h1{font-size:54px;letter-spacing:8px;margin:0 0 6px;color:#fff;
+  text-shadow:0 0 30px rgba(140,200,255,.6);}
+.panel h1 span{color:var(--accent);}
+.panel h2{font-size:34px;letter-spacing:4px;margin:0 0 8px;color:#fff;}
+.panel .tag{font-style:italic;opacity:.8;margin:0 0 24px;font-size:15px;}
+.cols{display:flex;gap:26px;text-align:left;margin:8px 0 26px;}
+.cols>div{flex:1;}
+.cols h3{margin:0 0 8px;color:var(--accent);font-size:15px;letter-spacing:1px;}
+.cols p{margin:5px 0;font-size:13px;opacity:.85;line-height:1.4;}
+kbd{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+  border-radius:5px;padding:1px 7px;font-size:12px;font-family:inherit;
+  box-shadow:0 2px 0 rgba(0,0,0,.3);}
+button{margin-top:6px;padding:14px 40px;font-size:16px;letter-spacing:3px;
+  font-weight:700;color:#06121e;background:linear-gradient(180deg,#bfe6ff,#7fb8ff);
+  border:none;border-radius:30px;cursor:pointer;pointer-events:auto;
+  box-shadow:0 8px 30px rgba(120,180,255,.45);transition:transform .15s,box-shadow .15s;}
+button:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(120,180,255,.6);}
+button:active{transform:translateY(0);}
+.fine{margin-top:18px;font-size:12px;opacity:.6;line-height:1.5;}
+.panel.win h1{color:var(--gold);text-shadow:0 0 40px rgba(255,230,160,.6);}
+.lore{margin:14px 0;font-style:italic;opacity:.9;line-height:1.7;font-size:14px;}
+.lore p{margin:6px 0;}
+.score{margin-top:14px;font-size:16px;}
+.score b{color:var(--gold);}
+
+/* ---------- Sound toggle ---------- */
+#sound{position:fixed;right:18px;top:14px;width:40px;height:40px;padding:0;
+  font-size:18px;border-radius:50%;background:rgba(10,14,22,.7);color:#cfe6f0;
+  border:1px solid rgba(255,255,255,.18);box-shadow:none;z-index:11;letter-spacing:0;}
+#sound:hover{transform:none;background:rgba(30,40,60,.8);}
+#sound.off{opacity:.5;}
+
+@media (max-width:680px){
+  .cols{flex-direction:column;gap:10px;}
+  .panel{padding:28px 24px;}
+  .panel h1{font-size:38px;}
+  #narrative p{font-size:17px;}
+  .pip{width:62px;}
+  .pip label{display:none;}
+}
