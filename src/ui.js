@@ -25,10 +25,14 @@ export class UI {
         </div>
         <div id="timeline"></div>
       </div>
+      <div id="boss-bar">
+        <span id="boss-name"></span>
+        <div class="bbar"><div id="boss-fill"></div></div>
+      </div>
       <div id="toast"></div>
       <div id="narrative"><p id="narrative-text"></p></div>
       <div id="ending-line"><p></p></div>
-      <div id="hint">Q/E shift time · SHIFT phase · SPACE haunt · M map</div>
+      <div id="hint">Q/E shift time · SHIFT phase/dodge · SPACE haunt/strike · M map</div>
     `;
     this.energyFill = this.root.querySelector('#energy-fill');
     this.eraName = this.root.querySelector('#era-name');
@@ -41,6 +45,9 @@ export class UI {
     this.narrativeText = this.root.querySelector('#narrative-text');
     this.endingLine = this.root.querySelector('#ending-line');
     this.endingLineText = this.root.querySelector('#ending-line p');
+    this.bossBar = this.root.querySelector('#boss-bar');
+    this.bossName = this.root.querySelector('#boss-name');
+    this.bossFill = this.root.querySelector('#boss-fill');
     this.hint = this.root.querySelector('#hint');
 
     // build timeline pips
@@ -65,6 +72,19 @@ export class UI {
   markAnchor(eraIndex) {
     const pip = this.pips[eraIndex];
     if (pip) pip.classList.add('anchored');
+  }
+
+  // Boss health bar (top-centre) — shown only while a guardian is awake.
+  showBoss(name, frac = 1) {
+    this.bossName.textContent = name;
+    this.bossFill.style.width = (Math.max(0, Math.min(1, frac)) * 100) + '%';
+    this.bossBar.classList.add('show');
+  }
+  updateBoss(frac) {
+    this.bossFill.style.width = (Math.max(0, Math.min(1, frac)) * 100) + '%';
+  }
+  hideBoss() {
+    this.bossBar.classList.remove('show');
   }
 
   update(dt, ghost) {
@@ -147,16 +167,16 @@ export function titleHTML() {
         <div>
           <h3>Bend time</h3>
           <p><kbd>Q</kbd> earlier era · <kbd>E</kbd> later era</p>
-          <p>The same island across four ages</p>
+          <p>The same island across five ages</p>
         </div>
         <div>
-          <h3>Remember</h3>
-          <p>Gather <b>✦ memory fragments</b> hidden across eras</p>
-          <p>Awaken an <b>◆ Anchor</b> in each age to move on</p>
+          <h3>Fight &amp; remember</h3>
+          <p><kbd>Space</kbd> haunt — your strike against the Guardians</p>
+          <p>Beat each age's <b>◆ Guardian</b> to free its Anchor</p>
         </div>
       </div>
       <button id="start-btn">ENTER THE WORLD</button>
-      <p class="fine">Soul energy powers phasing & time-shifts. Drink the glowing wisps to refill. Haunt the living with <kbd>Space</kbd>.</p>
+      <p class="fine">SOUL is your life and your power: it fuels phasing/time-shifts and drains when you're struck. Drink wisps to refill, and reclaim <b>✦ memories</b> to grow stronger.</p>
     </div>`;
 }
 

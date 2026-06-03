@@ -101,6 +101,13 @@ export class Audio {
     [523, 659, 784, 1046].forEach((f, i) =>
       setTimeout(() => this._blip(f, 0.8, 'sine', 0.2), i * 180));
   }
+  // Ominous low swell when a guardian wakes (or enrages).
+  bossWake() {
+    this._blip(70, 1.0, 'sawtooth', 0.22, 130);
+    setTimeout(() => this._blip(98, 1.2, 'triangle', 0.18, 196), 90);
+  }
+  // Short dissonant thud when the ghost is struck.
+  hurt() { this._blip(120, 0.22, 'square', 0.16, 50); }
   // Slow ascending swell for the ending cutscene.
   ending() {
     const notes = [261.6, 329.6, 392, 523.25, 659.3, 784, 1046.5];

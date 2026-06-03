@@ -33,10 +33,10 @@ Then visit **http://localhost:8000** and press **ENTER THE WORLD**.
 | Keys | Action |
 |------|--------|
 | `W A S D` / Arrow keys | Drift through the world |
-| `Shift` (hold) | **Phase** through stone, mountains & walls (drains SOUL) |
+| `Shift` (hold) | **Phase** — slip through stone & walls, and **dodge** attacks (i-frames; drains SOUL) |
 | `Q` | Shift to an **earlier** age |
 | `E` | Shift to a **later** age |
-| `Space` | **Haunt** — scare the living, and charge a nearby Anchor |
+| `Space` | **Haunt** — your **strike** against the Guardians, and a scare to the living |
 | `M` | Toggle the minimap |
 | `P` / `Esc` | Pause |
 | `♪` (top-right) | Toggle sound |
@@ -48,7 +48,7 @@ On phones and tablets, on-screen controls appear automatically:
 | Control | Action |
 |---------|--------|
 | **Thumbstick** (bottom-left) | Drift — analog, so a small tilt drifts slowly |
-| **HAUNT** (bottom-right) | Haunt the living / charge a nearby Anchor |
+| **HAUNT** (bottom-right) | Strike a Guardian / scare the living |
 | **PHASE** (hold) | Phase through solid matter |
 | **◀ time / time ▶** | Shift to an earlier / later age |
 | **MAP** / **II** (right edge) | Toggle the minimap / pause |
@@ -72,18 +72,38 @@ The terrain (coastlines, hills, mountains) is shared across every era, so a
 mountain you phase through in the Dawn is the same rock you climb past in the
 Quiet. Shifting eras keeps your position but transforms the world around you.
 
+## ⚔️ The Guardians
+
+Each age's **Anchor (◆)** is barred by a **Guardian** — a spectral boss that
+must be defeated before the Anchor will awaken. They escalate as you go:
+
+1. **The Grove-Warden** — slow, telegraphed slams. It teaches the dance.
+2. **The Ember-Smith** — aimed volleys of fire.
+3. **The Pyre-Wraith** — radial bursts of embers, and fast.
+4. **The Gravekeeper** — wide fans and rings together.
+5. **THE FORGETTING** — the multi-phase final boss of the Hollow. Take it below
+   half and it *enrages*: faster, fiercer, denser.
+
+Combat reuses your verbs — there are no new buttons:
+
+- **HAUNT (`Space`)** is your strike: a short-cooldown spectral blow that costs a
+  little SOUL and damages a Guardian in range.
+- **PHASE (`Shift`)** is your dodge: while intangible you're immune to soul-fire
+  and contact — but it drains SOUL, so you can't dodge forever.
+- **SOUL is your life *and* your power.** Attacks drain it; if it empties mid-
+  fight you *scatter into the dark* and gather again nearby (the Guardian
+  recovers too) — so death is a setback, not an ending.
+
 ## ✦ How to win
 
-- **SOUL energy** powers phasing and time-shifting. Drink the glowing **wisps**
-  to refill it.
-- **Memory fragments (✦)** — 15 in all, three per age — are hidden across time,
-  some tucked inside solid matter you'll need to *phase* into. Each one you
-  reclaim adds a line to your story.
-- Each age holds one **Anchor (◆)**. To awaken it, you must first have reclaimed
-  at least one memory *from that same age*, then **haunt** it a few times to
-  charge it.
-- Awaken an Anchor in **all five ages** to trigger the ending — the memories you
-  gathered play back as you finally come to rest.
+- **SOUL energy** powers phasing, time-shifting and striking, and is your health
+  in a fight. Drink the glowing **wisps** to refill it.
+- **Memory fragments (✦)** — 15 in all, three per age, some hidden inside solid
+  matter you must *phase* into — are now **optional power**: each memory you
+  reclaim raises your max SOUL and sharpens your haunt, and adds a line to the
+  story you'll relive at the end. Gather them to make the Guardians easier.
+- **Defeat the Guardian** in **all five ages** to awaken every Anchor and trigger
+  the ending — the memories you gathered play back as you finally come to rest.
 
 ## 🧱 How it's built
 
@@ -94,9 +114,10 @@ Small, focused ES modules under `src/`:
 | `main.js` | Bootstraps the game, wires up audio unlock, sound toggle & touch controls |
 | `game.js` | The conductor: state machine, main loop, interactions, win logic |
 | `world.js` | One seeded heightmap (continent + separate ridge noise for mountains) |
-| `entities.js` | Per-era population: trees, props, villagers/spirits, wisps, anchors, fragments + simple wandering AI |
-| `player.js` | The ghost — momentum movement, phasing, energy economy |
-| `renderer.js` | All Canvas drawing: terrain, entities, ghost, fog, vignette, time-shift ripple, minimap |
+| `entities.js` | Per-era population: trees, props, villagers/spirits, wisps, anchors, Guardians, fragments + simple wandering AI |
+| `player.js` | The ghost — momentum movement, phasing, energy economy, combat timers |
+| `boss.js` | The Guardians: config-driven AI, telegraphed attack patterns & projectile simulation |
+| `renderer.js` | All Canvas drawing: terrain, entities, bosses, projectiles, ghost, fog, vignette, hurt/time-shift/ending FX, minimap |
 | `particles.js` | Pooled particle system for trails, sparkles & bursts |
 | `audio.js` | Procedural WebAudio: per-era ambient drone + blips (no audio files) |
 | `ui.js` | DOM HUD, timeline pips, narrative popups, title/pause/win overlays |

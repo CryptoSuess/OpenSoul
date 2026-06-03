@@ -13,9 +13,13 @@ export class Ghost {
     this.vx = 0;
     this.vy = 0;
     this.facing = 1;          // -1 left, 1 right
+    this.radius = GHOST.radius; // collision radius (used by combat hit-tests)
+    this.maxEnergy = GHOST.maxEnergy; // grows as memories are reclaimed
     this.energy = GHOST.maxEnergy;
     this.phasing = false;
     this.shiftCd = 0;
+    this.hauntCd = 0;         // cooldown between haunt strikes
+    this.invuln = 0;          // i-frames (after respawn)
     this.bob = 0;
     this.fragments = 0;       // memory fragments collected
     this.anchors = 0;         // anchors awakened
@@ -24,6 +28,8 @@ export class Ghost {
 
   update(dt, world, particles, accentRgb) {
     this.shiftCd = Math.max(0, this.shiftCd - dt);
+    this.hauntCd = Math.max(0, this.hauntCd - dt);
+    this.invuln = Math.max(0, this.invuln - dt);
     this.bob += dt * 3;
 
     const ax = moveAxis();
@@ -52,9 +58,9 @@ export class Ghost {
 
     // energy economy
     if (this.phasing) {
-      this.energy = clamp(this.energy - GHOST.phaseDrain * dt, 0, GHOST.maxEnergy);
+      this.energy = clamp(this.energy - GHOST.phaseDrain * dt, 0, this.maxEnergy);
     } else {
-      this.energy = clamp(this.energy + GHOST.energyRegen * dt, 0, GHOST.maxEnergy);
+      this.energy = clamp(this.energy + GHOST.energyRegen * dt, 0, this.maxEnergy);
     }
 
     // trail particles

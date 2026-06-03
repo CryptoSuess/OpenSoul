@@ -5,6 +5,7 @@
 
 import { makeRng, hash2 } from './rng.js';
 import { TILE, WORLD_W, WORLD_H, SEED, T, ERAS, TOTAL_FRAGMENTS } from './constants.js';
+import { makeBoss } from './boss.js';
 
 let _id = 1;
 const nextId = () => _id++;
@@ -143,6 +144,9 @@ export function buildEraLayer(world, eraIndex) {
     aty = Math.round(WORLD_H / 2 + Math.sin(aAng) * (aRad - k));
   }
   layer.anchor = makeAnchor((atx + 0.5) * TILE, (aty + 0.5) * TILE);
+
+  // The era's Guardian hovers at its Anchor and must be defeated to awaken it.
+  layer.boss = makeBoss(era.id, layer.anchor.x, layer.anchor.y);
 
   return layer;
 }
