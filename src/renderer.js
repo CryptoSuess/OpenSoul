@@ -700,6 +700,22 @@ export class Renderer {
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this._mmCanvas, 0, 0, WORLD_W, WORLD_H, ox, oy, size, size);
     ctx.imageSmoothingEnabled = true;
+
+    // village marker — one house glyph at the centroid of this era's solid
+    // structures (a single mark instead of a dot per hut, to avoid clutter)
+    let vx = 0, vy = 0, vn = 0;
+    for (const p of layer.props) {
+      if (p.type === 'hut' || p.type === 'ruinwall') { vx += p.x; vy += p.y; vn++; }
+    }
+    if (vn) {
+      const cx = ox + (vx / vn / TILE) * sc, cy = oy + (vy / vn / TILE) * sc;
+      ctx.fillStyle = '#caa46a';
+      ctx.fillRect(cx - 2.5, cy - 1, 5, 3.5);
+      ctx.beginPath();
+      ctx.moveTo(cx - 3.5, cy - 1); ctx.lineTo(cx, cy - 4); ctx.lineTo(cx + 3.5, cy - 1);
+      ctx.closePath(); ctx.fill();
+    }
+
     // anchor
     if (layer.anchor) {
       ctx.fillStyle = layer.anchor.active ? '#fff2c0' : '#88aaff';
@@ -711,11 +727,50 @@ export class Renderer {
       if (f.collected || f.era !== eraIndex) continue;
       ctx.fillRect(ox + (f.x / TILE) * sc - 1, oy + (f.y / TILE) * sc - 1, 2.5, 2.5);
     }
+
+    // guardian — diamond at the boss; brighter+outlined while fighting, faded
+    // once defeated so a cleared era reads as done
+    if (layer.boss) {
+      const b = layer.boss;
+      const bx = ox + (b.x / TILE) * sc, by = oy + (b.y / TILE) * sc;
+      const dead = b.state === 'dead';
+      const r = dead ? 3 : 4.5;
+      ctx.globalAlpha = (dead ? 0.4 : 1) * 0.85;
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.moveTo(bx, by - r); ctx.lineTo(bx + r, by); ctx.lineTo(bx, by + r); ctx.lineTo(bx - r, by);
+      ctx.closePath(); ctx.fill();
+      if (b.state === 'active') { ctx.lineWidth = 1; ctx.strokeStyle = '#fff'; ctx.stroke(); }
+      ctx.globalAlpha = 0.85;
+    }
+
     // ghost
     ctx.fillStyle = '#eaf6ff';
     ctx.beginPath();
     ctx.arc(ox + (ghost.x / TILE) * sc, oy + (ghost.y / TILE) * sc, 2.5, 0, 6.28);
     ctx.fill();
+
+    // legend — colour key below the map (own dark backing for readability)
+    const legend = [
+      ['#eaf6ff', 'You'],
+      [layer.anchor && layer.anchor.active ? '#fff2c0' : '#88aaff', 'Anchor'],
+      ['#fff7d6', 'Memory'],
+      [layer.boss ? layer.boss.color : '#ff8a8a', 'Guardian'],
+      ['#caa46a', 'Village'],
+    ];
+    const lx = ox - 4, lyTop = oy + size + 10, lh = 15;
+    ctx.fillStyle = 'rgba(8,10,16,0.7)';
+    ctx.fillRect(lx, lyTop - 6, size + 8, legend.length * lh + 8);
+    ctx.font = '11px system-ui, -apple-system, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    for (let i = 0; i < legend.length; i++) {
+      const ry = lyTop + i * lh + lh / 2;
+      ctx.fillStyle = legend[i][0];
+      ctx.beginPath(); ctx.arc(lx + 12, ry, 3, 0, 6.28); ctx.fill();
+      ctx.fillStyle = '#cfe0f0';
+      ctx.fillText(legend[i][1], lx + 22, ry);
+    }
     ctx.restore();
   }
 }
