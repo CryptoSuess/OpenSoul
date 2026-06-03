@@ -61,6 +61,7 @@ export class Game {
     this.charging = false;
     this._ending = null;
     this.mapOpen = false;
+    this.renderer.invalidateMinimap();
     this.ui.hideBoss();
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
@@ -551,6 +552,7 @@ export class Game {
     // blink the ghost during post-respawn invulnerability
     const blink = this.ghost.invuln > 0 && Math.floor(this.time * 12) % 2 === 0;
     if (this.respawnT <= 0 && !blink) {
+      r.drawPhaseGauge(this.ghost, this.time);
       r.drawCharge(this.ghost, this.charge, this.time);
       r.drawGhost(this.ghost, this.time, this.era.accent);
     }

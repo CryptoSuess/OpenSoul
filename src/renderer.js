@@ -2,7 +2,7 @@
 // color grading, fog, vignette and a ghostly bloom. Only visible tiles are
 // drawn so large worlds stay smooth.
 
-import { TILE, WORLD_W, WORLD_H, T, ERAS } from './constants.js';
+import { TILE, WORLD_W, WORLD_H, T, ERAS, GHOST } from './constants.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -10,6 +10,10 @@ export class Renderer {
     this.ctx = canvas.getContext('2d');
     this.cam = { x: 0, y: 0 };
     this.shake = 0;
+    // cached minimap terrain (rebuilt only when the era changes — see drawMinimap)
+    this._mmCanvas = null;
+    this._mmCtx = null;
+    this._mmEra = -1;
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -82,7 +86,7 @@ export class Renderer {
         else if (t === T.WATER) col = pal.water;
         else if (t === T.SHORE) col = pal.shore;
         else if (t === T.HILL) col = pal.hill;
-        else if (t === T.PEAK) col = pal.peak;
+        else if (t === T.PEAK) col = pal.solid; // impassable rock — distinct color
         else {
           // alternate land shades using height for texture
           col = (Math.floor(h * 40) & 1) ? pal.land : pal.land2;
@@ -91,6 +95,14 @@ export class Renderer {
         const sy = Math.floor(ty * TILE - camy);
         ctx.fillStyle = col;
         ctx.fillRect(sx, sy, TILE + 1, TILE + 1);
+
+        // PEAK (impassable): cheap raised-block edges so it clearly reads as a wall
+        if (t === T.PEAK) {
+          ctx.fillStyle = pal.solidHi;
+          ctx.fillRect(sx, sy, TILE + 1, 3);
+          ctx.fillStyle = pal.solidLo;
+          ctx.fillRect(sx, sy + TILE - 2, TILE + 1, 3);
+        }
 
         // animated water shimmer
         if (t === T.DEEP || t === T.WATER) {
@@ -467,6 +479,38 @@ export class Renderer {
     }
   }
 
+  // Phase "shift" gauge: a ring around the ghost that depletes as phasing
+  // drains SOUL, so you can see how long you can keep holding SHIFT. Fades in
+  // while phasing and pulses red as you near the end of your phase.
+  drawPhaseGauge(ghost, time) {
+    const fade = ghost.phaseFade;
+    if (fade <= 0.01) return;
+    const ctx = this.ctx;
+    const sx = ghost.x - (this.cam.x + this._sx);
+    const sy = ghost.y - (this.cam.y + this._sy) + Math.sin(ghost.bob) * 3;
+    const frac = ghost.maxEnergy > 0 ? ghost.energy / ghost.maxEnergy : 0;
+    const secsLeft = ghost.energy / GHOST.phaseDrain; // seconds of phasing left
+    const urgent = secsLeft < 1.2;
+    const col = urgent ? '#ff7a6b' : '#bfe0ff';
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    // faint full track
+    ctx.globalAlpha = 0.16 * fade;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 26, 0, Math.PI * 2);
+    ctx.stroke();
+    // depleting arc, clockwise from the top
+    const pulse = urgent ? 0.6 + Math.sin(time * 16) * 0.4 : 1;
+    ctx.globalAlpha = 0.9 * fade * pulse;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 26, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // Charge ring around the ghost while a heavy strike is winding up.
   drawCharge(ghost, charge, time) {
     if (charge <= 0) return;
@@ -609,6 +653,37 @@ export class Renderer {
     }
   }
 
+  // Force the cached minimap terrain to rebuild (e.g. after a new world).
+  invalidateMinimap() {
+    this._mmEra = -1;
+  }
+
+  // Bake the static per-era terrain into a 1px-per-tile offscreen canvas so the
+  // minimap is a single scaled blit per frame instead of 9k fillRects.
+  _buildMinimapTerrain(world, eraIndex) {
+    if (!this._mmCanvas) {
+      this._mmCanvas = document.createElement('canvas');
+      this._mmCanvas.width = WORLD_W;
+      this._mmCanvas.height = WORLD_H;
+      this._mmCtx = this._mmCanvas.getContext('2d');
+    }
+    const mc = this._mmCtx;
+    const pal = ERAS[eraIndex].palette;
+    for (let ty = 0; ty < WORLD_H; ty += 1) {
+      for (let tx = 0; tx < WORLD_W; tx += 1) {
+        const t = world.tileAt(tx, ty);
+        let c;
+        if (t === T.DEEP || t === T.WATER) c = pal.water;
+        else if (t === T.PEAK) c = pal.solid; // impassable rock — distinct on the map too
+        else if (t === T.SHORE) c = pal.shore;
+        else c = pal.land;
+        mc.fillStyle = c;
+        mc.fillRect(tx, ty, 1, 1);
+      }
+    }
+    this._mmEra = eraIndex;
+  }
+
   drawMinimap(world, layer, fragments, ghost, eraIndex) {
     const ctx = this.ctx;
     const size = 150;
@@ -616,24 +691,15 @@ export class Renderer {
     const ox = this.vw - size - pad;
     const oy = pad;
     const sc = size / WORLD_W;
-    const era = ERAS[eraIndex];
     ctx.save();
     ctx.globalAlpha = 0.85;
     ctx.fillStyle = 'rgba(8,10,16,0.7)';
     ctx.fillRect(ox - 4, oy - 4, size + 8, size + 8);
-    // terrain
-    for (let ty = 0; ty < WORLD_H; ty += 1) {
-      for (let tx = 0; tx < WORLD_W; tx += 1) {
-        const t = world.tileAt(tx, ty);
-        let c;
-        if (t === T.DEEP || t === T.WATER) c = era.palette.water;
-        else if (t === T.PEAK) c = era.palette.peak;
-        else if (t === T.SHORE) c = era.palette.shore;
-        else c = era.palette.land;
-        ctx.fillStyle = c;
-        ctx.fillRect(ox + tx * sc, oy + ty * sc, sc + 0.6, sc + 0.6);
-      }
-    }
+    // terrain — cached offscreen, rebuilt only when the era changes
+    if (this._mmEra !== eraIndex) this._buildMinimapTerrain(world, eraIndex);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this._mmCanvas, 0, 0, WORLD_W, WORLD_H, ox, oy, size, size);
+    ctx.imageSmoothingEnabled = true;
     // anchor
     if (layer.anchor) {
       ctx.fillStyle = layer.anchor.active ? '#fff2c0' : '#88aaff';
