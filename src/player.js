@@ -27,6 +27,14 @@ export class Ghost {
     this.anchors = 0;         // anchors awakened
     this.trailTimer = 0;
     this.phaseFade = 0;       // 0..1 — eases the phase "shift" gauge in/out
+    // per-run boon modifiers (neutral by default; set by chosen boons). These
+    // live on the instance — a fresh Ghost each run resets them, so upgrades
+    // never leak between runs.
+    this.dmgMult = 1;
+    this.speedMult = 1;
+    this.phaseDrainMult = 1;
+    this.regenMult = 1;
+    this.dashCdMult = 1;
   }
 
   update(dt, world, particles, accentRgb) {
@@ -41,9 +49,10 @@ export class Ghost {
     const wantPhase = isDown('phase') && this.energy > 0;
     this.phasing = wantPhase && (ax.x !== 0 || ax.y !== 0);
 
-    // a dash briefly allows over-speed (it sets velocity directly in game.js)
+    // a dash briefly allows over-speed (it sets velocity directly in game.js);
+    // boons scale the drift/phase ceilings (not the dash cap)
     const maxSpeed = this.dashT > 0 ? GHOST.dashSpeedCap
-      : this.phasing ? GHOST.phaseSpeed : GHOST.maxSpeed;
+      : this.phasing ? GHOST.phaseSpeed * this.speedMult : GHOST.maxSpeed * this.speedMult;
     this.vx += ax.x * GHOST.accel * dt;
     this.vy += ax.y * GHOST.accel * dt;
 
@@ -63,11 +72,11 @@ export class Ghost {
     // integrate with collision (axis-separated so we slide along walls)
     this._move(this.vx * dt, this.vy * dt, world);
 
-    // energy economy
+    // energy economy (boons soften phase drain / boost regen)
     if (this.phasing) {
-      this.energy = clamp(this.energy - GHOST.phaseDrain * dt, 0, this.maxEnergy);
+      this.energy = clamp(this.energy - GHOST.phaseDrain * this.phaseDrainMult * dt, 0, this.maxEnergy);
     } else {
-      this.energy = clamp(this.energy + GHOST.energyRegen * dt, 0, this.maxEnergy);
+      this.energy = clamp(this.energy + GHOST.energyRegen * this.regenMult * dt, 0, this.maxEnergy);
     }
     // gauge fades in while phasing, lingers briefly after release
     this.phaseFade = clamp(this.phaseFade + (this.phasing ? dt * 6 : -dt * 4), 0, 1);

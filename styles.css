@@ -130,6 +130,16 @@ button{margin-top:6px;padding:14px 40px;font-size:16px;letter-spacing:3px;
   box-shadow:0 8px 30px rgba(120,180,255,.45);transition:transform .15s,box-shadow .15s;}
 button:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(120,180,255,.6);}
 button:active{transform:translateY(0);}
+.boons{display:flex;gap:16px;margin:14px 0 8px;}
+.boon-card{position:relative;flex:1;min-width:150px;margin:0;padding:18px 16px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;
+  letter-spacing:0;color:#dff0ff;background:rgba(20,30,48,.7);
+  border:1px solid rgba(150,200,255,.22);border-radius:14px;box-shadow:none;}
+.boon-card:hover{transform:translateY(-3px);border-color:var(--accent);
+  box-shadow:0 12px 36px rgba(120,180,255,.35);background:rgba(28,42,66,.8);}
+.boon-card strong{font-size:16px;letter-spacing:1px;color:#fff;}
+.boon-card .boon-desc{font-size:13px;opacity:.85;line-height:1.4;text-transform:none;}
+.boon-card .boon-key{position:absolute;top:10px;right:12px;font-size:11px;opacity:.5;}
 .fine{margin-top:18px;font-size:12px;opacity:.6;line-height:1.5;}
 .panel.win h1{color:var(--gold);text-shadow:0 0 40px rgba(255,230,160,.6);}
 .lore{margin:14px 0;font-style:italic;opacity:.9;line-height:1.7;font-size:14px;}
