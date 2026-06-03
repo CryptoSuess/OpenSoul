@@ -19,7 +19,9 @@ export class Ghost {
     this.phasing = false;
     this.shiftCd = 0;
     this.hauntCd = 0;         // cooldown between haunt strikes
-    this.invuln = 0;          // i-frames (after respawn)
+    this.invuln = 0;          // i-frames (after respawn / dash)
+    this.dashCd = 0;          // cooldown between dashes
+    this.dashT = 0;           // active dash window (over-speed allowed)
     this.bob = 0;
     this.fragments = 0;       // memory fragments collected
     this.anchors = 0;         // anchors awakened
@@ -30,13 +32,17 @@ export class Ghost {
     this.shiftCd = Math.max(0, this.shiftCd - dt);
     this.hauntCd = Math.max(0, this.hauntCd - dt);
     this.invuln = Math.max(0, this.invuln - dt);
+    this.dashCd = Math.max(0, this.dashCd - dt);
+    this.dashT = Math.max(0, this.dashT - dt);
     this.bob += dt * 3;
 
     const ax = moveAxis();
     const wantPhase = isDown('phase') && this.energy > 0;
     this.phasing = wantPhase && (ax.x !== 0 || ax.y !== 0);
 
-    const maxSpeed = this.phasing ? GHOST.phaseSpeed : GHOST.maxSpeed;
+    // a dash briefly allows over-speed (it sets velocity directly in game.js)
+    const maxSpeed = this.dashT > 0 ? GHOST.dashSpeedCap
+      : this.phasing ? GHOST.phaseSpeed : GHOST.maxSpeed;
     this.vx += ax.x * GHOST.accel * dt;
     this.vy += ax.y * GHOST.accel * dt;
 

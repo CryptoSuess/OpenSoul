@@ -11,8 +11,8 @@ import { UI, Overlay, titleHTML, pauseHTML, winHTML } from './ui.js';
 import {
   buildEraLayer, buildFragments, updateSpirits, hexToRgb,
 } from './entities.js';
-import { bossStep, stepProjectiles } from './boss.js';
-import { initInput, consumePressed, isDown } from './input.js';
+import { bossStep, stepHazards } from './boss.js';
+import { initInput, consumePressed, isDown, moveAxis } from './input.js';
 
 const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, ENDING: 4, WIN: 3 };
 
@@ -30,6 +30,10 @@ export class Game {
     this.hurtFx = 0;
     this.projectiles = [];
     this.respawnT = 0;
+    this.hitstop = 0;
+    this.charge = 0;
+    this.charging = false;
+    this._lastPhaseTap = -1;
     this._taughtCombat = false;
     this.lore = [];
     initInput(window);
@@ -52,6 +56,9 @@ export class Game {
     this.hurtFx = 0;
     this.projectiles = [];
     this.respawnT = 0;
+    this.hitstop = 0;
+    this.charge = 0;
+    this.charging = false;
     this._ending = null;
     this.mapOpen = false;
     this.ui.hideBoss();
@@ -224,28 +231,37 @@ export class Game {
 
   // ---- interaction --------------------------------------------------------
 
-  // HAUNT is your attack: a spectral strike on cooldown that costs a little
-  // SOUL, damages a guardian in range, and scares the living.
-  haunt() {
+  // HAUNT is your attack. A quick tap is a normal strike; holding it charges a
+  // heavy blow that hits harder, reaches further and knocks the guardian back.
+  _strike(heavy) {
     const g = this.ghost;
     if (g.hauntCd > 0 || this.respawnT > 0) return;
-    g.hauntCd = COMBAT.hauntCd;
-    g.energy = Math.max(0, g.energy - COMBAT.hauntCost);
-    this.audio.haunt();
-    this.particles.burst(g.x, g.y, 14, [180, 210, 255], { speed: 130, life: 0.5 });
+    g.hauntCd = heavy ? COMBAT.heavyCd : COMBAT.hauntCd;
+    g.energy = Math.max(0, g.energy - (heavy ? COMBAT.heavyCost : COMBAT.hauntCost));
+    heavy ? this.audio.heavy() : this.audio.haunt();
+    const col = heavy ? [255, 235, 180] : [180, 210, 255];
+    this.particles.burst(g.x, g.y, heavy ? 28 : 14, col, { speed: heavy ? 220 : 130, life: heavy ? 0.7 : 0.5, size: heavy ? 4 : 3 });
 
     // strike the era's guardian if it's awake and within reach
     const b = this.boss;
     let hitBoss = false;
+    const range = COMBAT.hauntRange + (heavy ? 40 : 0);
     if (b && b.state === 'active') {
       const d = Math.hypot(b.x - g.x, b.y - g.y);
-      if (d < COMBAT.hauntRange + b.size * 0.5) {
-        const dmg = COMBAT.hauntDmg + g.fragments * COMBAT.fragDmgBonus;
+      if (d < range + b.size * 0.5) {
+        let dmg = COMBAT.hauntDmg + g.fragments * COMBAT.fragDmgBonus;
+        if (heavy) dmg *= COMBAT.heavyMult;
         b.hp -= dmg;
         b.hitFlash = 1;
         hitBoss = true;
-        this.particles.burst(b.x, b.y, 12, hexToRgb(b.color), { speed: 140, life: 0.45 });
+        if (heavy) {
+          const k = COMBAT.heavyKnockback / (d || 1);
+          b.x += (b.x - g.x) * k * (1 / 60) * 6;
+          b.y += (b.y - g.y) * k * (1 / 60) * 6;
+        }
+        this.particles.burst(b.x, b.y, heavy ? 22 : 12, hexToRgb(b.color), { speed: heavy ? 220 : 140, life: 0.45 });
         this.ui.showBoss(b.name, Math.max(0, b.hp / b.maxHp));
+        this.hitstop = Math.max(this.hitstop, heavy ? 0.10 : 0.035);
         if (b.hp <= 0) this._defeatBoss(b);
         else if (b.final && !b.enraged && b.hp / b.maxHp <= b.enrageAt) this._enrage(b);
       }
@@ -256,7 +272,25 @@ export class Game {
       const d = Math.hypot(sp.x - g.x, sp.y - g.y);
       if (d < GHOST.hauntRadius) sp.scared = sp.villager ? 2.5 : 1.2;
     }
-    this.renderer.addShake(hitBoss ? 4 : 2);
+    this.renderer.addShake(hitBoss ? (heavy ? 8 : 4) : 2);
+  }
+
+  // Dash: a burst of speed with brief invulnerability (double-tap PHASE).
+  _dash() {
+    const g = this.ghost;
+    if (g.dashCd > 0 || this.respawnT > 0 || g.energy < COMBAT.dashCost) return;
+    const ax = moveAxis();
+    let dx = ax.x, dy = ax.y;
+    if (dx === 0 && dy === 0) { dx = g.facing; dy = 0; }
+    const inv = 1 / (Math.hypot(dx, dy) || 1);
+    g.vx = dx * inv * COMBAT.dashSpeed;
+    g.vy = dy * inv * COMBAT.dashSpeed;
+    g.dashT = COMBAT.dashIFrames;
+    g.invuln = Math.max(g.invuln, COMBAT.dashIFrames);
+    g.dashCd = COMBAT.dashCd;
+    g.energy = Math.max(0, g.energy - COMBAT.dashCost);
+    this.audio.dash();
+    this.particles.burst(g.x, g.y, 18, [190, 225, 255], { speed: 180, life: 0.5, size: 3 });
   }
 
   _wakeBoss(b) {
@@ -284,6 +318,7 @@ export class Game {
     b.state = 'dead';
     b.hp = 0;
     this.projectiles.length = 0;
+    this.hitstop = Math.max(this.hitstop, 0.18);
     this.audio.anchor();
     this.renderer.addShake(12);
     this.particles.burst(b.x, b.y, 70, hexToRgb(b.color), { speed: 240, life: 1.4, size: 4 });
@@ -320,6 +355,8 @@ export class Game {
 
   _dissipate() {
     this.respawnT = 1.5;
+    this.charging = false; this.charge = 0;
+    this.hitstop = Math.max(this.hitstop, 0.12);
     this.audio.hurt();
     this.renderer.addShake(14);
     this.particles.burst(this.ghost.x, this.ghost.y, 46, this.accentRgb, { speed: 210, life: 1.2, size: 4 });
@@ -429,10 +466,34 @@ export class Game {
       return;
     }
 
+    // hit-stop: freeze the action for a beat so blows land with weight
+    if (this.hitstop > 0) {
+      this.hitstop = Math.max(0, this.hitstop - dt);
+      this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
+      return;
+    }
+
     if (consumePressed('map')) this.mapOpen = !this.mapOpen;
     if (consumePressed('past')) this.shiftEra(-1);
     if (consumePressed('future')) this.shiftEra(1);
-    if (consumePressed('haunt')) this.haunt();
+
+    // double-tap PHASE to dash
+    if (consumePressed('phase')) {
+      if (this.time - this._lastPhaseTap <= COMBAT.dashWindow) this._dash();
+      this._lastPhaseTap = this.time;
+    }
+
+    // HAUNT: hold to charge a heavy, release to strike (a quick tap stays light)
+    consumePressed('haunt'); // drain the press edge; we drive off the held state
+    const holdingHaunt = isDown('haunt');
+    if (holdingHaunt && this.ghost.hauntCd <= 0) {
+      this.charging = true;
+      this.charge = Math.min(1, this.charge + dt / COMBAT.chargeTime);
+    } else if (this.charging && !holdingHaunt) {
+      this._strike(this.charge >= 1);
+      this.charging = false;
+      this.charge = 0;
+    }
 
     this.ghost.update(dt, this.world, this.particles, this.accentRgb);
     updateSpirits(this.layer, dt, this.ghost);
@@ -461,12 +522,15 @@ export class Game {
         }
       }
     }
-    // projectiles always advance; phasing / i-frames make the ghost immune
+    // hazards always advance; phasing / dashing / i-frames make the ghost immune
     const immune = g.phasing || g.invuln > 0;
-    const hits = stepProjectiles(this.projectiles, dt, g, this.world, immune);
-    if (hits > 0) {
+    const soul = stepHazards(this.projectiles, dt, g, this.world, immune, COMBAT);
+    if (soul > 0) {
       this.audio.hurt();
-      this._damage(COMBAT.projDmg * hits);
+      // a discrete projectile/zone/ring hit lands with a beat; beam/contact
+      // ticks (small per-frame) don't freeze the action
+      if (soul >= 6) this.hitstop = Math.max(this.hitstop, 0.05);
+      this._damage(soul);
     }
   }
 
@@ -486,8 +550,11 @@ export class Game {
     this.particles.draw(r.ctx, r.cam);
     // blink the ghost during post-respawn invulnerability
     const blink = this.ghost.invuln > 0 && Math.floor(this.time * 12) % 2 === 0;
-    if (this.respawnT <= 0 && !blink) r.drawGhost(this.ghost, this.time, this.era.accent);
-    r.drawProjectiles(this.projectiles, this.time);
+    if (this.respawnT <= 0 && !blink) {
+      r.drawCharge(this.ghost, this.charge, this.time);
+      r.drawGhost(this.ghost, this.time, this.era.accent);
+    }
+    r.drawHazards(this.projectiles, this.time);
     r.postFx(this.eraIndex, this.ghost, this.shiftFx, this.endingFx, this.hurtFx);
     if (this.mapOpen && this.state === STATE.PLAY) {
       r.drawMinimap(this.world, this.layer, this.fragments, this.ghost, this.eraIndex);

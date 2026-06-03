@@ -33,10 +33,12 @@ Then visit **http://localhost:8000** and press **ENTER THE WORLD**.
 | Keys | Action |
 |------|--------|
 | `W A S D` / Arrow keys | Drift through the world |
-| `Shift` (hold) | **Phase** — slip through stone & walls, and **dodge** attacks (i-frames; drains SOUL) |
+| `Shift` (hold) | **Phase** — slip through stone & walls, dodge attacks (i-frames; drains SOUL) |
+| `Shift` (double-tap) | **Dash** — a burst of speed with brief invulnerability |
 | `Q` | Shift to an **earlier** age |
 | `E` | Shift to a **later** age |
-| `Space` | **Haunt** — your **strike** against the Guardians, and a scare to the living |
+| `Space` (tap) | **Strike** a Guardian / scare the living |
+| `Space` (hold) | Charge a **heavy strike** (~2.6× damage + knockback) |
 | `M` | Toggle the minimap |
 | `P` / `Esc` | Pause |
 | `♪` (top-right) | Toggle sound |
@@ -48,8 +50,8 @@ On phones and tablets, on-screen controls appear automatically:
 | Control | Action |
 |---------|--------|
 | **Thumbstick** (bottom-left) | Drift — analog, so a small tilt drifts slowly |
-| **HAUNT** (bottom-right) | Strike a Guardian / scare the living |
-| **PHASE** (hold) | Phase through solid matter |
+| **HAUNT** (bottom-right) | Tap to strike; **hold** to charge a heavy strike |
+| **PHASE** (hold) | Phase through solid matter; **double-tap** to dash |
 | **◀ time / time ▶** | Shift to an earlier / later age |
 | **MAP** / **II** (right edge) | Toggle the minimap / pause |
 
@@ -75,21 +77,25 @@ Quiet. Shifting eras keeps your position but transforms the world around you.
 ## ⚔️ The Guardians
 
 Each age's **Anchor (◆)** is barred by a **Guardian** — a spectral boss that
-must be defeated before the Anchor will awaken. They escalate as you go:
+must be defeated before the Anchor will awaken. Each has a *signature attack*,
+so every fight is its own duel:
 
-1. **The Grove-Warden** — slow, telegraphed slams. It teaches the dance.
-2. **The Ember-Smith** — aimed volleys of fire.
-3. **The Pyre-Wraith** — radial bursts of embers, and fast.
-4. **The Gravekeeper** — wide fans and rings together.
-5. **THE FORGETTING** — the multi-phase final boss of the Hollow. Take it below
-   half and it *enrages*: faster, fiercer, denser.
+1. **The Grove-Warden** — telegraphed slams + **roots** that erupt where you're
+   standing. It teaches the dance.
+2. **The Ember-Smith** — a sweeping **fire-beam** that rakes across the arena.
+3. **The Pyre-Wraith** — fast **expanding ember-rings** you must weave through a
+   gap to survive.
+4. **The Gravekeeper** — **homing grave-shades** that curve after you.
+5. **THE FORGETTING** — the final boss of the Hollow. Take it below half and it
+   *enrages*: faster, denser, loosing **two patterns at once** (a bullet-storm).
 
 Combat reuses your verbs — there are no new buttons:
 
-- **HAUNT (`Space`)** is your strike: a short-cooldown spectral blow that costs a
-  little SOUL and damages a Guardian in range.
+- **HAUNT (`Space`)** is your strike. A quick tap is a light blow; **hold** to
+  charge a **heavy strike** (~2.6× damage) that knocks the Guardian back.
 - **PHASE (`Shift`)** is your dodge: while intangible you're immune to soul-fire
-  and contact — but it drains SOUL, so you can't dodge forever.
+  and contact. **Double-tap** it to **dash** — a burst of speed with i-frames,
+  for slipping through a wall of fire.
 - **SOUL is your life *and* your power.** Attacks drain it; if it empties mid-
   fight you *scatter into the dark* and gather again nearby (the Guardian
   recovers too) — so death is a setback, not an ending.
