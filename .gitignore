@@ -1,0 +1,8 @@
+# OpenSoul is a zero-dependency static game — nothing to build.
+# These only appear if you run the optional dev/test tooling.
+node_modules/
+package-lock.json
+*.log
+_shot_*.png
+_smoke.mjs
+.DS_Store
