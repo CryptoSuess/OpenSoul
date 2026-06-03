@@ -2,7 +2,7 @@
 // color grading, fog, vignette and a ghostly bloom. Only visible tiles are
 // drawn so large worlds stay smooth.
 
-import { TILE, WORLD_W, WORLD_H, T, ERAS } from './constants.js';
+import { TILE, WORLD_W, WORLD_H, T, ERAS, GHOST } from './constants.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -477,6 +477,38 @@ export class Renderer {
         ctx.restore();
       }
     }
+  }
+
+  // Phase "shift" gauge: a ring around the ghost that depletes as phasing
+  // drains SOUL, so you can see how long you can keep holding SHIFT. Fades in
+  // while phasing and pulses red as you near the end of your phase.
+  drawPhaseGauge(ghost, time) {
+    const fade = ghost.phaseFade;
+    if (fade <= 0.01) return;
+    const ctx = this.ctx;
+    const sx = ghost.x - (this.cam.x + this._sx);
+    const sy = ghost.y - (this.cam.y + this._sy) + Math.sin(ghost.bob) * 3;
+    const frac = ghost.maxEnergy > 0 ? ghost.energy / ghost.maxEnergy : 0;
+    const secsLeft = ghost.energy / GHOST.phaseDrain; // seconds of phasing left
+    const urgent = secsLeft < 1.2;
+    const col = urgent ? '#ff7a6b' : '#bfe0ff';
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    // faint full track
+    ctx.globalAlpha = 0.16 * fade;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 26, 0, Math.PI * 2);
+    ctx.stroke();
+    // depleting arc, clockwise from the top
+    const pulse = urgent ? 0.6 + Math.sin(time * 16) * 0.4 : 1;
+    ctx.globalAlpha = 0.9 * fade * pulse;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 26, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   // Charge ring around the ghost while a heavy strike is winding up.

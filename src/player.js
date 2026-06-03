@@ -26,6 +26,7 @@ export class Ghost {
     this.fragments = 0;       // memory fragments collected
     this.anchors = 0;         // anchors awakened
     this.trailTimer = 0;
+    this.phaseFade = 0;       // 0..1 — eases the phase "shift" gauge in/out
   }
 
   update(dt, world, particles, accentRgb) {
@@ -68,6 +69,8 @@ export class Ghost {
     } else {
       this.energy = clamp(this.energy + GHOST.energyRegen * dt, 0, this.maxEnergy);
     }
+    // gauge fades in while phasing, lingers briefly after release
+    this.phaseFade = clamp(this.phaseFade + (this.phasing ? dt * 6 : -dt * 4), 0, 1);
 
     // trail particles
     this.trailTimer -= dt;
