@@ -3,7 +3,7 @@
 > *An open world adrift in time. You are a ghost who forgot how to rest.*
 
 OpenSoul is a browser-based, top-down **open-world ghost game**. You drift as a
-lost soul across a single island — but that island exists in **four different
+lost soul across a single island — but that island exists in **five different
 ages at once**, and you can phase between them at will. The land stays the
 same; everything living on it does not. Gather the fragments of your own memory
 scattered across time, awaken an Anchor in each age, and finally move on.
@@ -56,15 +56,16 @@ On phones and tablets, on-screen controls appear automatically:
 The thumbstick and a button can be held at once (e.g. drift while phasing), and
 the layout respects device safe-areas (notches and the home indicator).
 
-## 🌍 The four ages
+## 🌍 The five ages
 
 You travel the same island across the flow of time:
 
 1. **The Verdant Dawn** — wild, green, full of nature spirits, before any names.
 2. **The Age of Hearths** — a living village of huts and people you can haunt.
-3. **The Long Quiet** — the present. Cold hearths, mossy ruins, gravestones.
+3. **The Sundering** — the night it all burned. Smoke, embers, and fleeing souls.
+4. **The Long Quiet** — the present. Cold hearths, mossy ruins, gravestones.
    *(You wake here.)*
-4. **The Hollow To-Come** — a corrupted void of shards and hostile wraiths that
+5. **The Hollow To-Come** — a corrupted void of shards and hostile wraiths that
    drain your SOUL on contact.
 
 The terrain (coastlines, hills, mountains) is shared across every era, so a
@@ -75,13 +76,14 @@ Quiet. Shifting eras keeps your position but transforms the world around you.
 
 - **SOUL energy** powers phasing and time-shifting. Drink the glowing **wisps**
   to refill it.
-- **Memory fragments (✦)** are hidden across all four eras — some tucked inside
-  solid matter you'll need to *phase* into. Each one you reclaim adds a line to
-  your story.
+- **Memory fragments (✦)** — 15 in all, three per age — are hidden across time,
+  some tucked inside solid matter you'll need to *phase* into. Each one you
+  reclaim adds a line to your story.
 - Each age holds one **Anchor (◆)**. To awaken it, you must first have reclaimed
   at least one memory *from that same age*, then **haunt** it a few times to
   charge it.
-- Awaken an Anchor in **all four ages** to come to rest.
+- Awaken an Anchor in **all five ages** to trigger the ending — the memories you
+  gathered play back as you finally come to rest.
 
 ## 🧱 How it's built
 

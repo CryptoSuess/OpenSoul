@@ -68,6 +68,7 @@ export function buildEraLayer(world, eraIndex) {
   // Ambient props specific to the era (stones / graves / shards).
   if (era.propDensity > 0) {
     const propType = era.id === 'verdant' ? 'stone'
+      : era.id === 'sundering' ? 'ember'
       : era.id === 'ruin' ? 'grave'
       : era.id === 'hollow' ? 'shard' : 'stone';
     for (let ty = 2; ty < WORLD_H - 2; ty++) {

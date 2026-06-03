@@ -83,6 +83,27 @@ export const ERAS = [
     mood: 'living',
   },
   {
+    id: 'sundering',
+    name: 'The Sundering',
+    blurb: 'The night the hearths went out. Smoke, and running feet.',
+    sky: '#1a0d08',
+    fogColor: '120, 50, 25',
+    fogStrength: 0.30,
+    vignette: 0.46,
+    palette: {
+      deep: '#1a1410', water: '#3a2418', shore: '#5a4030',
+      land: '#4a3327', land2: '#3d2a1f', hill: '#5a3a28', peak: '#6b4636',
+    },
+    accent: '#ff9a5a',        // ember glow
+    treeDensity: 0.09,
+    treeColor: '#3a2418',     // charred
+    propDensity: 0.016,       // smouldering rubble
+    village: 'ruined',        // huts caught mid-collapse
+    villagerCount: 8,         // a few souls still fleeing
+    spirits: 12,
+    mood: 'falling',
+  },
+  {
     id: 'ruin',
     name: 'The Long Quiet',
     blurb: 'The hearths went cold. Moss took the walls. You woke here.',
@@ -126,18 +147,34 @@ export const ERAS = [
   },
 ];
 
-// Story beats — each memory fragment carries a line. There are more lines than
-// fragments; we pick them in order of collection so the tale assembles itself.
+// Memory fragments — each carries one line, revealed in order of collection so
+// the tale assembles itself. At least TOTAL_FRAGMENTS lines so none repeat.
 export const MEMORY_LINES = [
   'A child laughed by the river. The sound has no face anymore.',
   'You carved two names into a standing stone. Only one weathered away.',
   'The hearth-fire smelled of pine. Someone waited up for you.',
-  'There was a quarrel. You meant to take it back. You never did.',
   'You planted a tree the day she was born. It outlived the village.',
+  'There was a quarrel. You meant to take it back. You never did.',
+  'They came at harvest, with torches instead of lanterns.',
+  'You carried two children to the treeline. You went back for a third.',
+  'The smoke had a weight to it. It is still on your hands.',
+  'You did not see the roof fall. You only heard it stop the screaming.',
+  'The river ran orange that night, and then it ran cold.',
+  'Moss took the walls so gently it seemed like forgiveness.',
+  'You looked for graves with the right names and found only your own footprints.',
   'The Long Quiet is not silence. It is everyone listening for you.',
-  'You are not lost. You are unfinished.',
-  'To move on, you must remember enough to forgive what you forgot.',
+  'Even the wraiths in the dark were once someone you failed to save.',
+  'What is not remembered does not rest. It only waits.',
 ];
 
-export const TOTAL_FRAGMENTS = 12; // scattered across all eras
-export const ANCHORS_TO_WIN = 4;   // one per era
+// Resolution beats — played only during the ending cutscene, after the last
+// Anchor is awakened.
+export const ENDING_LINES = [
+  'You are not lost. You were only unfinished.',
+  'To move on, you had to remember enough to forgive what you forgot.',
+  'The hearths are cold, the names are dust — and still, you were loved.',
+  'Let the smoke settle. Let the river warm. Let go.',
+];
+
+export const TOTAL_FRAGMENTS = 15; // 3 per era × 5 eras
+export const ANCHORS_TO_WIN = 5;   // one per era
