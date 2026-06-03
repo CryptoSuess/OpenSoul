@@ -7,14 +7,15 @@ import { Ghost } from './player.js';
 import { Renderer } from './renderer.js';
 import { Particles } from './particles.js';
 import { Audio } from './audio.js';
-import { UI, Overlay, titleHTML, pauseHTML, winHTML } from './ui.js';
+import { UI, Overlay, titleHTML, pauseHTML, winHTML, boonHTML } from './ui.js';
+import { pickBoons, BOONS } from './boons.js';
 import {
   buildEraLayer, buildFragments, updateSpirits, hexToRgb,
 } from './entities.js';
 import { bossStep, stepHazards } from './boss.js';
 import { initInput, consumePressed, isDown, moveAxis } from './input.js';
 
-const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, ENDING: 4, WIN: 3 };
+const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, ENDING: 4, WIN: 3, BOON: 5 };
 
 export class Game {
   constructor(canvas, uiRoot, overlayEl) {
@@ -61,6 +62,8 @@ export class Game {
     this.charging = false;
     this._ending = null;
     this.mapOpen = false;
+    this.takenBoons = [];
+    this.boonChoices = [];
     this.renderer.invalidateMinimap();
     this.ui.hideBoss();
     this.audio.setEra(this.eraIndex);
@@ -178,6 +181,9 @@ export class Game {
 
   _bindOverlayClicks(el) {
     el.addEventListener('click', (e) => {
+      // boon cards are buttons; the click can land on a child span, so walk up
+      const boonBtn = e.target.closest && e.target.closest('.boon-card');
+      if (boonBtn) { this.chooseBoon(boonBtn.id.slice(5)); return; }
       if (e.target.id === 'start-btn') this.start();
       else if (e.target.id === 'resume-btn') this.resume();
       else if (e.target.id === 'restart-btn') { this._reset(); this.start(); }
@@ -255,7 +261,7 @@ export class Game {
     if (b && b.state === 'active') {
       const d = Math.hypot(b.x - g.x, b.y - g.y);
       if (d < range + b.size * 0.5) {
-        let dmg = COMBAT.hauntDmg + g.fragments * COMBAT.fragDmgBonus;
+        let dmg = (COMBAT.hauntDmg + g.fragments * COMBAT.fragDmgBonus) * g.dmgMult;
         if (heavy) dmg *= COMBAT.heavyMult;
         b.hp -= dmg;
         b.hitFlash = 1;
@@ -293,7 +299,7 @@ export class Game {
     g.vy = dy * inv * COMBAT.dashSpeed;
     g.dashT = COMBAT.dashIFrames;
     g.invuln = Math.max(g.invuln, COMBAT.dashIFrames);
-    g.dashCd = COMBAT.dashCd;
+    g.dashCd = COMBAT.dashCd * g.dashCdMult;
     g.energy = Math.max(0, g.energy - COMBAT.dashCost);
     this.audio.dash();
     this.particles.burst(g.x, g.y, 18, [190, 225, 255], { speed: 180, life: 0.5, size: 3 });
@@ -349,7 +355,31 @@ export class Game {
     this.ui.showNarrative('A piece of you settles into place, like a held breath finally let go.');
     if (this.ghost.anchors >= ANCHORS_TO_WIN) {
       setTimeout(() => this._beginEnding(), 1600);
+    } else {
+      // otherwise, offer a boon — after a beat so the defeat lands first
+      setTimeout(() => this._openBoons(), 900);
     }
+  }
+
+  // ---- boons (between-fights upgrades) ------------------------------------
+
+  _openBoons() {
+    if (this.state !== STATE.PLAY) return; // don't interrupt ending / a respawn screen
+    this.boonChoices = pickBoons(3);
+    this.state = STATE.BOON;
+    this.overlay.show(boonHTML(this.boonChoices));
+  }
+
+  chooseBoon(id) {
+    if (this.state !== STATE.BOON) return;
+    const boon = BOONS.find((b) => b.id === id);
+    if (!boon) return;
+    boon.apply(this.ghost);
+    this.takenBoons.push(id);
+    this.overlay.hide();
+    this.state = STATE.PLAY;
+    this.ui.toastMsg('Boon gained — ' + boon.name);
+    this.ui.update(0, this.ghost);
   }
 
   // Take combat damage. Sets the hurt flash and, if SOUL is spent mid-fight,
@@ -450,6 +480,16 @@ export class Game {
       if (this.state === STATE.TITLE) this.start();
       else if (this.state === STATE.ENDING) this.win(); // skip to the panel
       else if (this.state === STATE.WIN) { this._reset(); this.start(); }
+    }
+
+    // boon picker: 1 / 2 / 3 select a card (clicking also works)
+    if (this.state === STATE.BOON) {
+      for (let i = 0; i < 3; i++) {
+        if (consumePressed('boon' + (i + 1)) && this.boonChoices[i]) {
+          this.chooseBoon(this.boonChoices[i].id);
+          break;
+        }
+      }
     }
 
     // The ending cutscene drives itself; a tap/space/haunt skips to the panel.

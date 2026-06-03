@@ -191,6 +191,26 @@ export function pauseHTML() {
     </div>`;
 }
 
+// Between-fights boon picker. `choices` is an array of {id, name, desc}; each
+// card is a button whose id encodes the boon so the delegated click handler in
+// game.js can route it (ids like "boon-fierce").
+export function boonHTML(choices) {
+  return `
+    <div class="panel">
+      <h2>A piece of you returns</h2>
+      <p class="tag">Choose how the memory reshapes you.</p>
+      <div class="boons">
+        ${choices.map((b, i) => `
+          <button class="boon-card" id="boon-${b.id}">
+            <span class="boon-key">${i + 1}</span>
+            <strong>${b.name}</strong>
+            <span class="boon-desc">${b.desc}</span>
+          </button>`).join('')}
+      </div>
+      <p class="fine">Click a boon — or press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+    </div>`;
+}
+
 export function winHTML(fragments, lore) {
   return `
     <div class="panel win">

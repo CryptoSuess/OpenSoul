@@ -20,6 +20,7 @@ const MAP = {
   KeyM: 'map',
   KeyP: 'pause', Escape: 'pause',
   Enter: 'confirm',
+  Digit1: 'boon1', Digit2: 'boon2', Digit3: 'boon3',
 };
 
 // Core press/release — shared by keyboard handlers and the touch UI.
