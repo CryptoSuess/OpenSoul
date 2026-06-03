@@ -53,6 +53,7 @@ export const ERAS = [
     palette: {
       deep: '#0b2f3a', water: '#15596b', shore: '#7d8a4e',
       land: '#2f6b3d', land2: '#27592f', hill: '#3f5a3a', peak: '#5b6b52',
+      solid: '#8a8f7a', solidHi: '#b6bba2', solidLo: '#5c604f', // impassable rock
     },
     accent: '#8fffb0',     // wisp / glow accent
     treeDensity: 0.16,
@@ -73,6 +74,7 @@ export const ERAS = [
     palette: {
       deep: '#13313a', water: '#1c5566', shore: '#8a7a4a',
       land: '#5a6b3a', land2: '#4d5d31', hill: '#6b5f3f', peak: '#73685a',
+      solid: '#9a8e74', solidHi: '#c7b894', solidLo: '#6a604b', // impassable rock
     },
     accent: '#ffd27f',
     treeDensity: 0.07,
@@ -94,6 +96,7 @@ export const ERAS = [
     palette: {
       deep: '#1a1410', water: '#3a2418', shore: '#5a4030',
       land: '#4a3327', land2: '#3d2a1f', hill: '#5a3a28', peak: '#6b4636',
+      solid: '#8c5a3e', solidHi: '#c98a55', solidLo: '#542f1d', // impassable rock
     },
     accent: '#ff9a5a',        // ember glow
     treeDensity: 0.09,
@@ -115,6 +118,7 @@ export const ERAS = [
     palette: {
       deep: '#0c222b', water: '#184452', shore: '#5f6450',
       land: '#3a4a36', land2: '#33402f', hill: '#444a40', peak: '#54584f',
+      solid: '#7d8488', solidHi: '#a9b0b2', solidLo: '#4e5356', // impassable rock
     },
     accent: '#9fe8ff',
     treeDensity: 0.13,
@@ -136,6 +140,7 @@ export const ERAS = [
     palette: {
       deep: '#070512', water: '#1a1140', shore: '#2a2440',
       land: '#171528', land2: '#12101f', hill: '#221a36', peak: '#2e2444',
+      solid: '#4a3f6e', solidHi: '#6f5fa0', solidLo: '#291f44', // impassable rock
     },
     accent: '#d59bff',
     treeDensity: 0.04,

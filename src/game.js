@@ -61,6 +61,7 @@ export class Game {
     this.charging = false;
     this._ending = null;
     this.mapOpen = false;
+    this.renderer.invalidateMinimap();
     this.ui.hideBoss();
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
