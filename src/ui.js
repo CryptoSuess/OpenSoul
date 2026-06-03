@@ -32,7 +32,7 @@ export class UI {
       <div id="toast"></div>
       <div id="narrative"><p id="narrative-text"></p></div>
       <div id="ending-line"><p></p></div>
-      <div id="hint">Q/E shift time · SHIFT phase/dodge · SPACE haunt/strike · M map</div>
+      <div id="hint">Q/E shift · SHIFT phase (2× = dash) · SPACE strike (hold = heavy) · M map</div>
     `;
     this.energyFill = this.root.querySelector('#energy-fill');
     this.eraName = this.root.querySelector('#era-name');
@@ -171,7 +171,8 @@ export function titleHTML() {
         </div>
         <div>
           <h3>Fight &amp; remember</h3>
-          <p><kbd>Space</kbd> haunt — your strike against the Guardians</p>
+          <p><kbd>Space</kbd> strike — <b>hold</b> for a heavy blow</p>
+          <p>Double-tap <kbd>Shift</kbd> to <b>dash</b> through attacks</p>
           <p>Beat each age's <b>◆ Guardian</b> to free its Anchor</p>
         </div>
       </div>

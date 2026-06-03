@@ -108,6 +108,13 @@ export class Audio {
   }
   // Short dissonant thud when the ghost is struck.
   hurt() { this._blip(120, 0.22, 'square', 0.16, 50); }
+  // Heavier, lower strike for a charged haunt.
+  heavy() {
+    this._blip(180, 0.5, 'triangle', 0.22, 80);
+    setTimeout(() => this._blip(90, 0.4, 'sawtooth', 0.16, 200), 30);
+  }
+  // Airy whoosh for a dash.
+  dash() { this._blip(620, 0.28, 'sine', 0.12, 240); }
   // Slow ascending swell for the ending cutscene.
   ending() {
     const notes = [261.6, 329.6, 392, 523.25, 659.3, 784, 1046.5];

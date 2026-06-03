@@ -27,6 +27,7 @@ export const GHOST = {
   accel: 2400,        // px/s^2
   maxSpeed: 260,      // px/s normal drift
   phaseSpeed: 420,    // px/s while phasing
+  dashSpeedCap: 720,  // px/s ceiling during a dash burst
   friction: 6.5,      // velocity damping per second
   radius: 11,
   maxEnergy: 100,
@@ -187,21 +188,36 @@ export const COMBAT = {
   hauntCost: 5,        // SOUL spent per strike
   hauntCd: 0.30,       // seconds between strikes
   hauntRange: 110,     // strike reach (centre-to-centre, before boss radius)
-  projDmg: 11,         // SOUL lost per projectile hit
+  projDmg: 11,         // SOUL lost per bolt / homing hit
+  ringDmg: 12,         // SOUL lost crossing an expanding ring
+  zoneDmg: 16,         // SOUL lost caught in an erupting ground-zone
+  beamDps: 34,         // SOUL/sec while inside a sweeping beam
   contactDps: 26,      // SOUL/sec while overlapping an active boss body
   respawnSoul: 55,     // SOUL restored after dissipating
   respawnInvuln: 1.7,  // seconds of invulnerability after respawning
   fragSoulBonus: 6,    // +max SOUL per reclaimed memory
   fragDmgBonus: 0.9,   // +haunt damage per reclaimed memory
   teleTime: 0.5,       // attack wind-up (telegraph) duration
+  // heavy strike (hold HAUNT to charge)
+  chargeTime: 0.55,    // hold duration for a full heavy
+  heavyMult: 2.6,      // heavy damage multiplier
+  heavyCost: 12,       // SOUL spent on a heavy
+  heavyCd: 0.5,        // cooldown after a heavy
+  heavyKnockback: 280, // how hard a heavy shoves the boss
+  // dash (double-tap PHASE)
+  dashSpeed: 660,      // burst velocity
+  dashCost: 10,        // SOUL spent
+  dashCd: 0.55,        // cooldown between dashes
+  dashIFrames: 0.26,   // invulnerable window (also the over-speed window)
+  dashWindow: 0.28,    // max gap between PHASE taps to trigger a dash
 };
 
 // One Guardian per era, keyed by era id. They gate each Anchor and escalate
 // in difficulty; THE FORGETTING is the multi-phase final boss.
 export const BOSSES = {
-  verdant:  { name: 'The Grove-Warden', hp: 80,  size: 44, color: '#8fffb0', speed: 36, fireEvery: 2.1, projSpeed: 150, patterns: ['slam', 'spread3'],          wake: 270 },
-  stone:    { name: 'The Ember-Smith',  hp: 115, size: 40, color: '#ffd27f', speed: 48, fireEvery: 1.8, projSpeed: 195, patterns: ['aim', 'spread3'],            wake: 270 },
-  sundering:{ name: 'The Pyre-Wraith',  hp: 150, size: 44, color: '#ff9a5a', speed: 60, fireEvery: 1.6, projSpeed: 205, patterns: ['ring', 'aim', 'spread3'],     wake: 290 },
-  ruin:     { name: 'The Gravekeeper',  hp: 185, size: 46, color: '#9fe8ff', speed: 56, fireEvery: 1.5, projSpeed: 215, patterns: ['aim', 'spread5', 'ring'],     wake: 290 },
-  hollow:   { name: 'THE FORGETTING',   hp: 300, size: 58, color: '#d59bff', speed: 64, fireEvery: 1.3, projSpeed: 230, patterns: ['spread5', 'ring', 'aim'],     wake: 330, final: true, enrageAt: 0.5 },
+  verdant:  { name: 'The Grove-Warden', hp: 80,  size: 44, color: '#8fffb0', speed: 36, fireEvery: 2.1, projSpeed: 150, patterns: ['slam', 'roots', 'spread3'],       wake: 270 },
+  stone:    { name: 'The Ember-Smith',  hp: 115, size: 40, color: '#ffd27f', speed: 48, fireEvery: 1.9, projSpeed: 195, patterns: ['aim', 'beam', 'spread3'],         wake: 270 },
+  sundering:{ name: 'The Pyre-Wraith',  hp: 150, size: 44, color: '#ff9a5a', speed: 60, fireEvery: 1.7, projSpeed: 205, patterns: ['ring', 'expand', 'aim'],          wake: 290 },
+  ruin:     { name: 'The Gravekeeper',  hp: 185, size: 46, color: '#9fe8ff', speed: 56, fireEvery: 1.6, projSpeed: 215, patterns: ['aim', 'homing', 'spread5'],       wake: 290 },
+  hollow:   { name: 'THE FORGETTING',   hp: 300, size: 58, color: '#d59bff', speed: 64, fireEvery: 1.35,projSpeed: 230, patterns: ['spread5', 'expand', 'homing', 'ring'], wake: 330, final: true, enrageAt: 0.5 },
 };

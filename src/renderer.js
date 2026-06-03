@@ -405,24 +405,85 @@ export class Renderer {
     ctx.restore();
   }
 
-  // Boss soul-fire projectiles.
-  drawProjectiles(arr, time) {
+  // Boss soul-fire hazards — bolts, homing shades, sweeping beams, expanding
+  // rings and erupting ground-zones.
+  drawHazards(arr, time) {
     if (!arr || !arr.length) return;
     const ctx = this.ctx;
     const cam = { x: this.cam.x + this._sx, y: this.cam.y + this._sy };
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
     for (const p of arr) {
       const sx = p.x - cam.x;
       const sy = p.y - cam.y;
-      this._glow(sx, sy, p.r * 2.6, p.color, 0.6);
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath();
-      ctx.arc(sx, sy, p.r * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
+      if (p.kind === 'zone') {
+        ctx.save();
+        if (!p.done) {
+          // telegraph: outline + a filling glow that completes as it erupts
+          const fill = 1 - Math.max(0, p.warn) / 0.75;
+          ctx.strokeStyle = this._withAlpha(p.color, 0.85);
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(sx, sy, p.r, 0, 6.2832); ctx.stroke();
+          ctx.globalCompositeOperation = 'lighter';
+          this._glow(sx, sy, p.r * fill, p.color, 0.45);
+        } else {
+          // detonation flash
+          const a = Math.max(0, p.flash) / 0.22;
+          ctx.globalCompositeOperation = 'lighter';
+          this._glow(sx, sy, p.r * 1.25, '#ffffff', a * 0.8);
+          this._glow(sx, sy, p.r, p.color, a * 0.9);
+        }
+        ctx.restore();
+      } else if (p.kind === 'beam') {
+        const ex = sx + Math.cos(p.ang) * p.len;
+        const ey = sy + Math.sin(p.ang) * p.len;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = this._withAlpha(p.color, 0.8);
+        ctx.lineWidth = p.width;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = p.width * 0.4;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.restore();
+      } else if (p.kind === 'ring') {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = this._withAlpha(p.color, 0.8);
+        ctx.lineWidth = p.band * 1.7;
+        ctx.beginPath(); // the arc, leaving the gap open to weave through
+        ctx.arc(sx, sy, p.r, p.gapC + p.gapHalf, p.gapC - p.gapHalf + 6.2832);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // bolt / homing — glowing orb
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        this._glow(sx, sy, p.r * 2.6, p.color, 0.6);
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath(); ctx.arc(sx, sy, p.r * 0.6, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
     }
+  }
+
+  // Charge ring around the ghost while a heavy strike is winding up.
+  drawCharge(ghost, charge, time) {
+    if (charge <= 0) return;
+    const ctx = this.ctx;
+    const sx = ghost.x - (this.cam.x + this._sx);
+    const sy = ghost.y - (this.cam.y + this._sy) + Math.sin(ghost.bob) * 3;
+    const full = charge >= 1;
+    const col = full ? '#ffec9a' : '#bfe0ff';
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (full) this._glow(sx, sy, 26 + Math.sin(time * 20) * 3, col, 0.5);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 20, -Math.PI / 2, -Math.PI / 2 + charge * Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 
