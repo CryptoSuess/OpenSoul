@@ -28,6 +28,8 @@ Then visit **http://localhost:8000** and press **ENTER THE WORLD**.
 
 ## 🎮 Controls
 
+### Desktop (keyboard)
+
 | Keys | Action |
 |------|--------|
 | `W A S D` / Arrow keys | Drift through the world |
@@ -38,6 +40,21 @@ Then visit **http://localhost:8000** and press **ENTER THE WORLD**.
 | `M` | Toggle the minimap |
 | `P` / `Esc` | Pause |
 | `♪` (top-right) | Toggle sound |
+
+### Mobile / touch
+
+On phones and tablets, on-screen controls appear automatically:
+
+| Control | Action |
+|---------|--------|
+| **Thumbstick** (bottom-left) | Drift — analog, so a small tilt drifts slowly |
+| **HAUNT** (bottom-right) | Haunt the living / charge a nearby Anchor |
+| **PHASE** (hold) | Phase through solid matter |
+| **◀ time / time ▶** | Shift to an earlier / later age |
+| **MAP** / **II** (right edge) | Toggle the minimap / pause |
+
+The thumbstick and a button can be held at once (e.g. drift while phasing), and
+the layout respects device safe-areas (notches and the home indicator).
 
 ## 🌍 The four ages
 
@@ -72,7 +89,7 @@ Small, focused ES modules under `src/`:
 
 | File | Responsibility |
 |------|----------------|
-| `main.js` | Bootstraps the game, wires up audio unlock & the sound toggle |
+| `main.js` | Bootstraps the game, wires up audio unlock, sound toggle & touch controls |
 | `game.js` | The conductor: state machine, main loop, interactions, win logic |
 | `world.js` | One seeded heightmap (continent + separate ridge noise for mountains) |
 | `entities.js` | Per-era population: trees, props, villagers/spirits, wisps, anchors, fragments + simple wandering AI |
@@ -81,7 +98,8 @@ Small, focused ES modules under `src/`:
 | `particles.js` | Pooled particle system for trails, sparkles & bursts |
 | `audio.js` | Procedural WebAudio: per-era ambient drone + blips (no audio files) |
 | `ui.js` | DOM HUD, timeline pips, narrative popups, title/pause/win overlays |
-| `input.js` | Keyboard state + edge-triggered "pressed this frame" events |
+| `input.js` | Unified keyboard + touch input: `down` set, edge-triggered presses, analog move axis |
+| `touch.js` | On-screen thumbstick + action buttons for phones/tablets (no-op on desktop) |
 | `rng.js` | Seedable PRNG + value/fractal noise so the world is deterministic |
 | `constants.js` | All tuning + the definition of each era (palette, mood, density) |
 
