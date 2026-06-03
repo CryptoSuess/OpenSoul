@@ -208,10 +208,15 @@ export class Game {
     this.particles.burst(this.ghost.x, this.ghost.y, 28, [200, 225, 255], { speed: 160, life: 0.9, size: 3 });
     // projectiles belong to the era you just left
     this.projectiles.length = 0;
-    // show / hide the boss bar for the destination era's guardian
+    // show / hide the boss bar + combat music for the destination era's guardian
     const b = this.boss;
-    if (b && b.state === 'active') this.ui.showBoss(b.name, b.hp / b.maxHp);
-    else this.ui.hideBoss();
+    if (b && b.state === 'active') {
+      this.ui.showBoss(b.name, b.hp / b.maxHp);
+      this.audio.startBossMusic(this.eraIndex);
+    } else {
+      this.ui.hideBoss();
+      this.audio.stopBossMusic();
+    }
     // nudge ghost out of any solid it now sits inside
     this._unstick();
   }
@@ -299,6 +304,7 @@ export class Game {
     b.fireT = 1.0;
     b.telegraphing = false;
     this.audio.bossWake();
+    this.audio.startBossMusic(this.eraIndex);
     this.renderer.addShake(8);
     this.ui.showBoss(b.name, 1);
     this.ui.toastMsg(b.name + ' rises to bar your way');
@@ -311,6 +317,7 @@ export class Game {
   _enrage(b) {
     b.enraged = true;
     this.audio.bossWake();
+    this.audio.enrageBossMusic();
     this.renderer.addShake(10);
     this.ui.toastMsg(b.name + ' will not be forgotten quietly…');
   }
@@ -320,6 +327,7 @@ export class Game {
     b.hp = 0;
     this.projectiles.length = 0;
     this.hitstop = Math.max(this.hitstop, 0.18);
+    this.audio.stopBossMusic();
     this.audio.anchor();
     this.renderer.addShake(12);
     this.particles.burst(b.x, b.y, 70, hexToRgb(b.color), { speed: 240, life: 1.4, size: 4 });
@@ -380,6 +388,7 @@ export class Game {
       b.enraged = false;
       b.telegraphing = false;
     }
+    this.audio.stopBossMusic();
     this.ui.hideBoss();
   }
 

@@ -9,6 +9,10 @@ export class Audio {
     this.master = null;
     this.droneGain = null;
     this.osc = [];
+    this.bossGain = null;
+    // procedural boss-fight music: a small step sequencer scheduled against the
+    // audio clock. `timer` is the lookahead interval; nodes are short-lived.
+    this.bossMusic = { playing: false, timer: null, nextTime: 0, step: 0, eraIndex: 0, intensity: 0 };
   }
 
   _ensure() {
@@ -29,6 +33,13 @@ export class Audio {
     this.droneFilter = filter;
     this.droneGain.connect(filter);
     filter.connect(this.master);
+
+    // boss music rides its own gain so the whole bed can fade/duck as one and
+    // still inherits the master mute.
+    this.bossGain = this.ctx.createGain();
+    this.bossGain.gain.value = 0.0;
+    this.bossGain.connect(this.master);
+
     for (let i = 0; i < 2; i++) {
       const o = this.ctx.createOscillator();
       o.type = i === 0 ? 'sine' : 'triangle';
@@ -121,5 +132,92 @@ export class Audio {
     notes.forEach((f, i) =>
       setTimeout(() => this._blip(f, 1.6, 'sine', 0.15), i * 420));
     setTimeout(() => this._blip(523.25, 3.2, 'triangle', 0.1), 200);
+  }
+
+  // ---- boss combat music (procedural step sequencer) ----------------------
+  // A driving bass pulse + arpeggio + percussive tick, keyed to the era's root
+  // (matching the drone tuning), scheduled against the audio clock so it never
+  // drifts. Each step spawns short, self-stopping voices — nothing accumulates.
+  _bossRoot(eraIndex) {
+    const roots = [110, 98, 87.3, 82.4, 65.4]; // same as the era drone roots
+    return roots[eraIndex % roots.length];
+  }
+
+  // One short voice routed through bossGain (auto-stops, like _blip).
+  _bossVoice(freq, dur, type, gain, when) {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, when);
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(gain, when + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+    o.connect(g);
+    g.connect(this.bossGain);
+    o.start(when);
+    o.stop(when + dur + 0.02);
+  }
+
+  startBossMusic(eraIndex) {
+    this._ensure();
+    if (!this.ctx) return;
+    const bm = this.bossMusic;
+    if (bm.playing && bm.eraIndex === eraIndex) return;
+    if (bm.timer) { clearInterval(bm.timer); bm.timer = null; }
+    bm.playing = true;
+    bm.eraIndex = eraIndex;
+    bm.step = 0;
+    bm.intensity = 0;
+    bm.nextTime = this.ctx.currentTime + 0.05;
+    // duck the ambient drone under the fight, bring the music bed up
+    this.droneGain.gain.setTargetAtTime(0.05, this.ctx.currentTime, 0.4);
+    this.bossGain.gain.setTargetAtTime(0.12, this.ctx.currentTime, 0.3);
+    bm.timer = setInterval(() => this._bossScheduler(), 25);
+  }
+
+  // Escalate when the final guardian enrages: faster cadence + a louder bed.
+  enrageBossMusic() {
+    const bm = this.bossMusic;
+    if (!bm.playing) return;
+    bm.intensity = 1;
+    if (this.ctx) this.bossGain.gain.setTargetAtTime(0.16, this.ctx.currentTime, 0.3);
+  }
+
+  stopBossMusic() {
+    const bm = this.bossMusic;
+    if (bm.timer) { clearInterval(bm.timer); bm.timer = null; }
+    bm.playing = false;
+    if (!this.ctx) return;
+    this.bossGain.gain.setTargetAtTime(0.0, this.ctx.currentTime, 0.4);
+    this.droneGain.gain.setTargetAtTime(0.14, this.ctx.currentTime, 0.8); // restore ambience
+  }
+
+  // Lookahead: queue any steps that fall within the next ~120ms.
+  _bossScheduler() {
+    const bm = this.bossMusic;
+    if (!bm.playing || !this.ctx) return;
+    // if a throttled/background tab let us fall far behind, resync rather than
+    // dumping a burst of catch-up notes
+    if (this.ctx.currentTime - bm.nextTime > 0.5) bm.nextTime = this.ctx.currentTime + 0.05;
+    const root = this._bossRoot(bm.eraIndex);
+    const stepDur = bm.intensity ? 0.135 : 0.16; // 16th-note step, faster enraged
+    while (bm.nextTime < this.ctx.currentTime + 0.12) {
+      if (this.enabled) {
+        const s = bm.step % 16;
+        const when = bm.nextTime;
+        // bass pulse on the quarter beats
+        if (s % 4 === 0) this._bossVoice(root * 0.5, stepDur * 3.2, 'sawtooth', 0.22, when);
+        // arpeggio across the 8ths: root / minor third / fifth / octave
+        if (s % 2 === 0) {
+          const arp = [1, 1.2, 1.5, 2][(s / 2) % 4];
+          this._bossVoice(root * arp, stepDur * 1.6, 'triangle', 0.10, when);
+        }
+        // driving tick every step, hotter offbeats when enraged
+        const tickGain = (s % 2 === 1 ? 0.05 : 0.03) * (bm.intensity ? 1.6 : 1);
+        this._bossVoice(root * 4, 0.03, 'square', tickGain, when);
+      }
+      bm.nextTime += stepDur;
+      bm.step++;
+    }
   }
 }
