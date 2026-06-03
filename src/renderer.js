@@ -349,6 +349,83 @@ export class Renderer {
     }
   }
 
+  // A guardian boss: a large, menacing spectral form that flares as it winds
+  // up an attack and whitens when struck.
+  drawBoss(b, time) {
+    const ctx = this.ctx;
+    const cam = { x: this.cam.x + this._sx, y: this.cam.y + this._sy };
+    const sx = b.x - cam.x;
+    const sy = b.y - cam.y + Math.sin(b.bob * 1.5) * 4;
+    const dormant = b.state === 'dormant';
+    const tele = b.telegraphing ? Math.min(1, b.teleT / 0.5) : 0;
+    const R = b.size * (dormant ? 0.8 : 1) * (1 + tele * 0.18);
+
+    // outer aura (telegraph flares it brighter/larger)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    this._glow(sx, sy, R * (1.6 + tele * 0.8), b.color, dormant ? 0.25 : 0.45 + tele * 0.4);
+    if (b.enraged) this._glow(sx, sy, R * 2.2, '#ff5a7a', 0.3);
+    ctx.restore();
+
+    // body
+    ctx.save();
+    ctx.translate(sx, sy);
+    // drifting tendrils
+    ctx.globalAlpha = dormant ? 0.5 : 0.85;
+    ctx.fillStyle = this._withAlpha(b.color, 0.5);
+    const tn = 7;
+    for (let i = 0; i < tn; i++) {
+      const a = (i / tn) * 6.2832 + time * 0.6;
+      const len = R * (0.9 + Math.sin(time * 3 + i) * 0.18);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len + R * 0.4);
+      ctx.lineTo(Math.cos(a + 0.5) * len * 0.7, Math.sin(a + 0.5) * len * 0.7 + R * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // core orb
+    const core = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
+    core.addColorStop(0, b.hitFlash > 0 ? '#ffffff' : this._withAlpha(b.color, 0.95));
+    core.addColorStop(1, this._withAlpha(b.color, 0.15));
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.fill();
+    // eyes
+    ctx.fillStyle = b.enraged ? '#ff3a5a' : '#1a1020';
+    const eyes = b.final ? 3 : 2;
+    for (let i = 0; i < eyes; i++) {
+      const ex = (i - (eyes - 1) / 2) * R * 0.34;
+      ctx.beginPath();
+      ctx.ellipse(ex, -R * 0.12, R * 0.09, R * 0.16, 0, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Boss soul-fire projectiles.
+  drawProjectiles(arr, time) {
+    if (!arr || !arr.length) return;
+    const ctx = this.ctx;
+    const cam = { x: this.cam.x + this._sx, y: this.cam.y + this._sy };
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of arr) {
+      const sx = p.x - cam.x;
+      const sy = p.y - cam.y;
+      this._glow(sx, sy, p.r * 2.6, p.color, 0.6);
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(sx, sy, p.r * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
   drawGhost(p, time, accent) {
     const ctx = this.ctx;
     const sx = p.x - (this.cam.x + this._sx);
@@ -399,15 +476,16 @@ export class Renderer {
   }
 
   _withAlpha(hex, a) {
-    const v = hex.replace('#', '');
+    let v = hex.replace('#', '');
+    if (v.length === 3) v = v[0] + v[0] + v[1] + v[1] + v[2] + v[2]; // #rgb -> #rrggbb
     const r = parseInt(v.substr(0, 2), 16);
     const g = parseInt(v.substr(2, 2), 16);
     const b = parseInt(v.substr(4, 2), 16);
     return `rgba(${r},${g},${b},${a})`;
   }
 
-  // Fog + vignette + optional time-shift ripple + ending wash.
-  postFx(eraIndex, ghost, shiftFx, endingFx = 0) {
+  // Fog + vignette + optional time-shift ripple + ending wash + hurt flash.
+  postFx(eraIndex, ghost, shiftFx, endingFx = 0, hurtFx = 0) {
     const ctx = this.ctx;
     const era = ERAS[eraIndex];
     // colored fog (fades away as the ending light takes over)
@@ -442,6 +520,15 @@ export class Renderer {
         ctx.fillRect(0, 0, this.vw, this.vh);
       }
       ctx.restore();
+    }
+
+    // hurt flash — red pulse from the edges when SOUL is struck
+    if (hurtFx > 0) {
+      const hg = ctx.createRadialGradient(cx, cy, maxR * 0.3, cx, cy, maxR);
+      hg.addColorStop(0, 'rgba(255,30,50,0)');
+      hg.addColorStop(1, `rgba(220,20,40,${hurtFx * 0.5})`);
+      ctx.fillStyle = hg;
+      ctx.fillRect(0, 0, this.vw, this.vh);
     }
 
     // time-shift ripple flash

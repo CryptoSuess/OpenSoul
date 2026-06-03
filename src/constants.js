@@ -178,3 +178,30 @@ export const ENDING_LINES = [
 
 export const TOTAL_FRAGMENTS = 15; // 3 per era × 5 eras
 export const ANCHORS_TO_WIN = 5;   // one per era
+
+// ---- Combat tuning ------------------------------------------------------
+// The ghost's verbs double as combat: HAUNT strikes, PHASE dodges, SOUL is
+// both your resource and your life. Reclaimed memories make you stronger.
+export const COMBAT = {
+  hauntDmg: 13,        // base damage per haunt strike
+  hauntCost: 5,        // SOUL spent per strike
+  hauntCd: 0.30,       // seconds between strikes
+  hauntRange: 110,     // strike reach (centre-to-centre, before boss radius)
+  projDmg: 11,         // SOUL lost per projectile hit
+  contactDps: 26,      // SOUL/sec while overlapping an active boss body
+  respawnSoul: 55,     // SOUL restored after dissipating
+  respawnInvuln: 1.7,  // seconds of invulnerability after respawning
+  fragSoulBonus: 6,    // +max SOUL per reclaimed memory
+  fragDmgBonus: 0.9,   // +haunt damage per reclaimed memory
+  teleTime: 0.5,       // attack wind-up (telegraph) duration
+};
+
+// One Guardian per era, keyed by era id. They gate each Anchor and escalate
+// in difficulty; THE FORGETTING is the multi-phase final boss.
+export const BOSSES = {
+  verdant:  { name: 'The Grove-Warden', hp: 80,  size: 44, color: '#8fffb0', speed: 36, fireEvery: 2.1, projSpeed: 150, patterns: ['slam', 'spread3'],          wake: 270 },
+  stone:    { name: 'The Ember-Smith',  hp: 115, size: 40, color: '#ffd27f', speed: 48, fireEvery: 1.8, projSpeed: 195, patterns: ['aim', 'spread3'],            wake: 270 },
+  sundering:{ name: 'The Pyre-Wraith',  hp: 150, size: 44, color: '#ff9a5a', speed: 60, fireEvery: 1.6, projSpeed: 205, patterns: ['ring', 'aim', 'spread3'],     wake: 290 },
+  ruin:     { name: 'The Gravekeeper',  hp: 185, size: 46, color: '#9fe8ff', speed: 56, fireEvery: 1.5, projSpeed: 215, patterns: ['aim', 'spread5', 'ring'],     wake: 290 },
+  hollow:   { name: 'THE FORGETTING',   hp: 300, size: 58, color: '#d59bff', speed: 64, fireEvery: 1.3, projSpeed: 230, patterns: ['spread5', 'ring', 'aim'],     wake: 330, final: true, enrageAt: 0.5 },
+};

@@ -1,7 +1,7 @@
 // game.js — the conductor. Owns the world, the per-era entity layers, the
 // ghost, the loop and the state machine (title / playing / paused / won).
 
-import { ERAS, GHOST, MEMORY_LINES, ENDING_LINES, ANCHORS_TO_WIN, TILE } from './constants.js';
+import { ERAS, GHOST, MEMORY_LINES, ENDING_LINES, ANCHORS_TO_WIN, TILE, COMBAT } from './constants.js';
 import { World } from './world.js';
 import { Ghost } from './player.js';
 import { Renderer } from './renderer.js';
@@ -11,6 +11,7 @@ import { UI, Overlay, titleHTML, pauseHTML, winHTML } from './ui.js';
 import {
   buildEraLayer, buildFragments, updateSpirits, hexToRgb,
 } from './entities.js';
+import { bossStep, stepProjectiles } from './boss.js';
 import { initInput, consumePressed, isDown } from './input.js';
 
 const STATE = { TITLE: 0, PLAY: 1, PAUSE: 2, ENDING: 4, WIN: 3 };
@@ -26,6 +27,10 @@ export class Game {
     this.time = 0;
     this.shiftFx = 0;
     this.endingFx = 0;
+    this.hurtFx = 0;
+    this.projectiles = [];
+    this.respawnT = 0;
+    this._taughtCombat = false;
     this.lore = [];
     initInput(window);
     this._reset();
@@ -44,8 +49,12 @@ export class Game {
     this.ghost = new Ghost(sp.x, sp.y);
     this.lore = [];
     this.endingFx = 0;
+    this.hurtFx = 0;
+    this.projectiles = [];
+    this.respawnT = 0;
     this._ending = null;
     this.mapOpen = false;
+    this.ui.hideBoss();
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
     this.ui.update(0, this.ghost);
@@ -53,6 +62,9 @@ export class Game {
 
   get layer() {
     return this.layers[this.eraIndex];
+  }
+  get boss() {
+    return this.layer.boss;
   }
   get era() {
     return ERAS[this.eraIndex];
@@ -186,6 +198,12 @@ export class Game {
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
     this.particles.burst(this.ghost.x, this.ghost.y, 28, [200, 225, 255], { speed: 160, life: 0.9, size: 3 });
+    // projectiles belong to the era you just left
+    this.projectiles.length = 0;
+    // show / hide the boss bar for the destination era's guardian
+    const b = this.boss;
+    if (b && b.state === 'active') this.ui.showBoss(b.name, b.hp / b.maxHp);
+    else this.ui.hideBoss();
     // nudge ghost out of any solid it now sits inside
     this._unstick();
   }
@@ -206,59 +224,125 @@ export class Game {
 
   // ---- interaction --------------------------------------------------------
 
+  // HAUNT is your attack: a spectral strike on cooldown that costs a little
+  // SOUL, damages a guardian in range, and scares the living.
   haunt() {
     const g = this.ghost;
-    let did = false;
-    // scare nearby villagers / spirits
+    if (g.hauntCd > 0 || this.respawnT > 0) return;
+    g.hauntCd = COMBAT.hauntCd;
+    g.energy = Math.max(0, g.energy - COMBAT.hauntCost);
+    this.audio.haunt();
+    this.particles.burst(g.x, g.y, 14, [180, 210, 255], { speed: 130, life: 0.5 });
+
+    // strike the era's guardian if it's awake and within reach
+    const b = this.boss;
+    let hitBoss = false;
+    if (b && b.state === 'active') {
+      const d = Math.hypot(b.x - g.x, b.y - g.y);
+      if (d < COMBAT.hauntRange + b.size * 0.5) {
+        const dmg = COMBAT.hauntDmg + g.fragments * COMBAT.fragDmgBonus;
+        b.hp -= dmg;
+        b.hitFlash = 1;
+        hitBoss = true;
+        this.particles.burst(b.x, b.y, 12, hexToRgb(b.color), { speed: 140, life: 0.45 });
+        this.ui.showBoss(b.name, Math.max(0, b.hp / b.maxHp));
+        if (b.hp <= 0) this._defeatBoss(b);
+        else if (b.final && !b.enraged && b.hp / b.maxHp <= b.enrageAt) this._enrage(b);
+      }
+    }
+
+    // scare nearby villagers / spirits regardless
     for (const sp of this.layer.spirits) {
       const d = Math.hypot(sp.x - g.x, sp.y - g.y);
-      if (d < GHOST.hauntRadius) {
-        if (sp.villager) { sp.scared = 2.5; did = true; }
-        else { sp.scared = 1.2; did = true; }
-      }
+      if (d < GHOST.hauntRadius) sp.scared = sp.villager ? 2.5 : 1.2;
     }
-    // try to charge the era's anchor if standing on it
-    const a = this.layer.anchor;
-    if (a && !a.active) {
-      const d = Math.hypot(a.x - g.x, a.y - g.y);
-      if (d < GHOST.hauntRadius + 10) {
-        this._chargeAnchor(a);
-        did = true;
-      }
-    }
-    if (did) {
-      this.audio.haunt();
-      this.particles.burst(g.x, g.y, 16, [180, 210, 255], { speed: 130, life: 0.6 });
-      this.renderer.addShake(3);
-    } else {
-      this.ui.toastMsg('Nothing here answers your haunting.');
+    this.renderer.addShake(hitBoss ? 4 : 2);
+  }
+
+  _wakeBoss(b) {
+    b.state = 'active';
+    b.fireT = 1.0;
+    b.telegraphing = false;
+    this.audio.bossWake();
+    this.renderer.addShake(8);
+    this.ui.showBoss(b.name, 1);
+    this.ui.toastMsg(b.name + ' rises to bar your way');
+    if (!this._taughtCombat) {
+      this._taughtCombat = true;
+      this.ui.showNarrative('Strike it with your haunting (SPACE / HAUNT). Phase (SHIFT) to slip through its soul-fire.');
     }
   }
 
-  _chargeAnchor(a) {
-    // Requires having collected at least one fragment from THIS era to awaken.
-    const eraFragsCollected = this.fragments.some(f => f.era === this.eraIndex && f.collected);
-    if (!eraFragsCollected) {
-      this.ui.toastMsg('This Anchor needs a memory from this age first. (✦)');
-      return;
+  _enrage(b) {
+    b.enraged = true;
+    this.audio.bossWake();
+    this.renderer.addShake(10);
+    this.ui.toastMsg(b.name + ' will not be forgotten quietly…');
+  }
+
+  _defeatBoss(b) {
+    b.state = 'dead';
+    b.hp = 0;
+    this.projectiles.length = 0;
+    this.audio.anchor();
+    this.renderer.addShake(12);
+    this.particles.burst(b.x, b.y, 70, hexToRgb(b.color), { speed: 240, life: 1.4, size: 4 });
+    this.ui.hideBoss();
+    this.ui.toastMsg(b.name + ' is laid to rest  ◆');
+    this._awakenAnchor(this.layer.anchor);
+  }
+
+  // Defeating a guardian awakens the Anchor it guarded.
+  _awakenAnchor(a) {
+    if (!a || a.active) return;
+    a.active = true;
+    a.charge = 1;
+    this.ghost.anchors++;
+    this.audio.anchor();
+    this.renderer.addShake(10);
+    this.particles.burst(a.x, a.y, 50, [255, 240, 190], { speed: 220, life: 1.3, size: 4 });
+    this.ui.markAnchor(this.eraIndex);
+    this.ui.showNarrative('A piece of you settles into place, like a held breath finally let go.');
+    if (this.ghost.anchors >= ANCHORS_TO_WIN) {
+      setTimeout(() => this._beginEnding(), 1600);
     }
-    a.charge += 0.34;
-    if (a.charge >= 1) {
-      a.active = true;
-      a.charge = 1;
-      this.ghost.anchors++;
-      this.audio.anchor();
-      this.renderer.addShake(10);
-      this.particles.burst(a.x, a.y, 50, [255, 240, 190], { speed: 220, life: 1.3, size: 4 });
-      this.ui.markAnchor(this.eraIndex);
-      this.ui.toastMsg('Anchor awakened in ' + this.era.name + '  ◆');
-      this.ui.showNarrative('A piece of you settles into place, like a held breath finally let go.');
-      if (this.ghost.anchors >= ANCHORS_TO_WIN) {
-        setTimeout(() => this._beginEnding(), 1600);
-      }
-    } else {
-      this.ui.toastMsg('The Anchor stirs… (haunt again)');
+  }
+
+  // Take combat damage. Sets the hurt flash and, if SOUL is spent mid-fight,
+  // dissipates the ghost.
+  _damage(amt) {
+    const g = this.ghost;
+    if (g.invuln > 0 || this.respawnT > 0) return;
+    g.energy = Math.max(0, g.energy - amt);
+    this.hurtFx = 1;
+    if (g.energy <= 0 && this.boss && this.boss.state === 'active') this._dissipate();
+  }
+
+  _dissipate() {
+    this.respawnT = 1.5;
+    this.audio.hurt();
+    this.renderer.addShake(14);
+    this.particles.burst(this.ghost.x, this.ghost.y, 46, this.accentRgb, { speed: 210, life: 1.2, size: 4 });
+    this.ui.toastMsg('You scatter into the dark… and gather again.');
+  }
+
+  _respawn() {
+    const sp = this.world.findSpawn();
+    const g = this.ghost;
+    g.x = sp.x; g.y = sp.y; g.vx = 0; g.vy = 0;
+    g.energy = Math.min(g.maxEnergy, COMBAT.respawnSoul);
+    g.invuln = COMBAT.respawnInvuln;
+    this.projectiles.length = 0;
+    // the guardian recovers and goes dormant until re-approached
+    const b = this.boss;
+    if (b && b.state === 'active') {
+      b.state = 'dormant';
+      b.hp = b.maxHp;
+      b.x = b.hx; b.y = b.hy;
+      b.enraged = false;
+      b.telegraphing = false;
     }
+    this.ui.hideBoss();
   }
 
   // ---- per-frame ----------------------------------------------------------
@@ -271,7 +355,7 @@ export class Game {
       const d = Math.hypot(w.x - g.x, w.y - g.y);
       if (d < 22) {
         w.gone = true;
-        g.energy = Math.min(GHOST.maxEnergy, g.energy + 18);
+        g.energy = Math.min(g.maxEnergy, g.energy + 18);
         this.audio.pickup();
         this.particles.burst(w.x, w.y, 12, this.accentRgb, { speed: 110, life: 0.6 });
       }
@@ -283,23 +367,24 @@ export class Game {
       if (d < 24) {
         f.collected = true;
         g.fragments++;
+        // reclaimed memories strengthen you: more SOUL, fiercer haunting
+        g.maxEnergy += COMBAT.fragSoulBonus;
+        g.energy = Math.min(g.maxEnergy, g.energy + COMBAT.fragSoulBonus);
         this.audio.fragment();
         this.renderer.addShake(4);
         this.particles.burst(f.x, f.y, 30, [255, 245, 200], { speed: 150, life: 1.1, size: 3.5 });
         const line = MEMORY_LINES[Math.min(this.lore.length, MEMORY_LINES.length - 1)];
         this.lore.push(line);
         this.ui.showNarrative(line);
-        this.ui.toastMsg('Memory fragment reclaimed ✦');
+        this.ui.toastMsg('Memory reclaimed — you feel stronger ✦');
       }
     }
-    // hostile wraith contact drains soul
-    if (this.era.corrupt) {
+    // hostile wraith contact drains soul (phasing / i-frames negate it)
+    if (this.era.corrupt && !g.phasing && g.invuln <= 0) {
       for (const sp of this.layer.spirits) {
         if (!sp.hostile || sp.scared > 0) continue;
         const d = Math.hypot(sp.x - g.x, sp.y - g.y);
-        if (d < 20) {
-          g.energy = Math.max(0, g.energy - 26 * (1 / 60));
-        }
+        if (d < 20) { this._damage(26 * (1 / 60)); break; }
       }
     }
   }
@@ -307,6 +392,7 @@ export class Game {
   update(dt) {
     this.time += dt;
     if (this.shiftFx > 0) this.shiftFx = Math.max(0, this.shiftFx - dt * 1.6);
+    if (this.hurtFx > 0) this.hurtFx = Math.max(0, this.hurtFx - dt * 2.2);
 
     // global hotkeys
     if (consumePressed('pause')) {
@@ -334,6 +420,15 @@ export class Game {
       return;
     }
 
+    // dissipated: freeze input, count down, then gather again
+    if (this.respawnT > 0) {
+      this.respawnT -= dt;
+      if (this.respawnT <= 0) this._respawn();
+      this.particles.update(dt);
+      this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
+      return;
+    }
+
     if (consumePressed('map')) this.mapOpen = !this.mapOpen;
     if (consumePressed('past')) this.shiftEra(-1);
     if (consumePressed('future')) this.shiftEra(1);
@@ -341,11 +436,38 @@ export class Game {
 
     this.ghost.update(dt, this.world, this.particles, this.accentRgb);
     updateSpirits(this.layer, dt, this.ghost);
+    this._updateBoss(dt);
     this.particles.update(dt);
     this._collisions();
     this.ui.update(dt, this.ghost);
 
     this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
+  }
+
+  // Guardian + projectile simulation for the current era.
+  _updateBoss(dt) {
+    const g = this.ghost;
+    const b = this.boss;
+    if (b && b.state !== 'dead') {
+      if (b.state === 'dormant') {
+        if (Math.hypot(b.x - g.x, b.y - g.y) < b.wake) this._wakeBoss(b);
+      } else {
+        bossStep(b, dt, g, this.projectiles, this.world);
+        this.ui.updateBoss(Math.max(0, b.hp / b.maxHp));
+        // body contact (incl. lunging) drains SOUL
+        if (!g.phasing && g.invuln <= 0) {
+          const d = Math.hypot(b.x - g.x, b.y - g.y);
+          if (d < b.size * 0.6 + g.radius) this._damage(COMBAT.contactDps * dt);
+        }
+      }
+    }
+    // projectiles always advance; phasing / i-frames make the ghost immune
+    const immune = g.phasing || g.invuln > 0;
+    const hits = stepProjectiles(this.projectiles, dt, g, this.world, immune);
+    if (hits > 0) {
+      this.audio.hurt();
+      this._damage(COMBAT.projDmg * hits);
+    }
   }
 
   render() {
@@ -360,9 +482,13 @@ export class Game {
     }
     r.drawWorld(this.world, this.eraIndex, this.time);
     r.drawEntities(this.layer, this.fragments, this.eraIndex, this.time, this.ghost);
+    if (this.boss && this.boss.state !== 'dead') r.drawBoss(this.boss, this.time);
     this.particles.draw(r.ctx, r.cam);
-    r.drawGhost(this.ghost, this.time, this.era.accent);
-    r.postFx(this.eraIndex, this.ghost, this.shiftFx, this.endingFx);
+    // blink the ghost during post-respawn invulnerability
+    const blink = this.ghost.invuln > 0 && Math.floor(this.time * 12) % 2 === 0;
+    if (this.respawnT <= 0 && !blink) r.drawGhost(this.ghost, this.time, this.era.accent);
+    r.drawProjectiles(this.projectiles, this.time);
+    r.postFx(this.eraIndex, this.ghost, this.shiftFx, this.endingFx, this.hurtFx);
     if (this.mapOpen && this.state === STATE.PLAY) {
       r.drawMinimap(this.world, this.layer, this.fragments, this.ghost, this.eraIndex);
     }
