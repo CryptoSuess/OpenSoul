@@ -1,11 +1,15 @@
 // main.js — bootstrap.
 import { Game } from './game.js';
+import { TouchControls } from './touch.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('game');
   const ui = document.getElementById('ui');
   const overlay = document.getElementById('overlay');
   const game = new Game(canvas, ui, overlay);
+
+  // On-screen controls for touch devices (no-op on desktop).
+  const touch = new TouchControls();
 
   // Audio + sound toggle button.
   const sndBtn = document.getElementById('sound');
@@ -24,4 +28,5 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // expose for debugging
   window.__opensoul = game;
+  window.__touch = touch;
 });
