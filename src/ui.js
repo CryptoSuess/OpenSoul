@@ -1,7 +1,7 @@
 // ui.js — HUD + screens rendered as DOM over the canvas. Keeps the canvas loop
 // focused on the world while crisp text/UI lives in HTML.
 
-import { GHOST, ERAS, TOTAL_FRAGMENTS, ANCHORS_TO_WIN } from './constants.js';
+import { ERAS, TOTAL_FRAGMENTS, ANCHORS_TO_WIN } from './constants.js';
 
 export class UI {
   constructor(root) {
@@ -88,8 +88,11 @@ export class UI {
   }
 
   update(dt, ghost) {
-    this.energyFill.style.width = (ghost.energy / GHOST.maxEnergy * 100) + '%';
-    this.energyFill.classList.toggle('low', ghost.energy < 25);
+    // measure against the ghost's CURRENT max (grows with Deeper Soul + reclaimed
+    // memories), not the base constant — otherwise the bar clips and the "low"
+    // warning is wrong once the pool grows.
+    this.energyFill.style.width = (ghost.energy / ghost.maxEnergy * 100) + '%';
+    this.energyFill.classList.toggle('low', ghost.energy < ghost.maxEnergy * 0.25);
     this.fragCount.textContent = `✦ ${ghost.fragments} / ${TOTAL_FRAGMENTS}`;
     this.anchorCount.textContent = `◆ ${ghost.anchors} / ${ANCHORS_TO_WIN}`;
     if (this.toastTimer > 0) {

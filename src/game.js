@@ -64,8 +64,10 @@ export class Game {
     this.mapOpen = false;
     this.takenBoons = [];
     this.boonChoices = [];
+    this._boonPending = false;
     this.renderer.invalidateMinimap();
     this.ui.hideBoss();
+    this.audio.stopBossMusic(); // a restart must not leak the prior run's combat bed
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
     this.ui.update(0, this.ghost);
@@ -104,11 +106,13 @@ export class Game {
   pause() {
     if (this.state !== STATE.PLAY) return;
     this.state = STATE.PAUSE;
+    this.audio.suspendBossMusic(); // don't let the combat bed play under the menu
     this.overlay.show(pauseHTML());
   }
   resume() {
     if (this.state !== STATE.PAUSE) return;
     this.overlay.hide();
+    this.audio.resumeBossMusic();
     this.state = STATE.PLAY;
   }
 
@@ -120,6 +124,7 @@ export class Game {
     if (this.state === STATE.ENDING || this.state === STATE.WIN) return;
     this.state = STATE.ENDING;
     this.ui.setHidden(true);
+    this.audio.stopBossMusic(); // never let a combat bed bleed into the ending
     this.audio.ending();
     const lines = [...this.lore, ...ENDING_LINES];
     this._ending = {
@@ -219,6 +224,7 @@ export class Game {
     if (b && b.state === 'active') {
       this.ui.showBoss(b.name, b.hp / b.maxHp);
       this.audio.startBossMusic(this.eraIndex);
+      if (b.enraged) this.audio.enrageBossMusic(); // resume the escalated bed, not the calm one
     } else {
       this.ui.hideBoss();
       this.audio.stopBossMusic();
@@ -295,8 +301,8 @@ export class Game {
     let dx = ax.x, dy = ax.y;
     if (dx === 0 && dy === 0) { dx = g.facing; dy = 0; }
     const inv = 1 / (Math.hypot(dx, dy) || 1);
-    g.vx = dx * inv * COMBAT.dashSpeed;
-    g.vy = dy * inv * COMBAT.dashSpeed;
+    g.vx = dx * inv * COMBAT.dashSpeed * g.speedMult;
+    g.vy = dy * inv * COMBAT.dashSpeed * g.speedMult;
     g.dashT = COMBAT.dashIFrames;
     g.invuln = Math.max(g.invuln, COMBAT.dashIFrames);
     g.dashCd = COMBAT.dashCd * g.dashCdMult;
@@ -356,17 +362,22 @@ export class Game {
     if (this.ghost.anchors >= ANCHORS_TO_WIN) {
       setTimeout(() => this._beginEnding(), 1600);
     } else {
-      // otherwise, offer a boon — after a beat so the defeat lands first
-      setTimeout(() => this._openBoons(), 900);
+      // otherwise queue a boon — after a beat so the defeat lands first. We set
+      // a flag rather than open directly, so a pause / era-shift / death during
+      // the delay can't drop the reward: update() opens it once we're safely
+      // back in play (see the _boonPending check).
+      setTimeout(() => { this._boonPending = true; }, 900);
     }
   }
 
   // ---- boons (between-fights upgrades) ------------------------------------
 
   _openBoons() {
-    if (this.state !== STATE.PLAY) return; // don't interrupt ending / a respawn screen
+    if (this.state !== STATE.PLAY) return; // opened only from the safe-play check
+    this._boonPending = false;
     this.boonChoices = pickBoons(3);
     this.state = STATE.BOON;
+    this.audio.suspendBossMusic(); // quiet any lingering combat bed under the picker
     this.overlay.show(boonHTML(this.boonChoices));
   }
 
@@ -378,6 +389,7 @@ export class Game {
     this.takenBoons.push(id);
     this.overlay.hide();
     this.state = STATE.PLAY;
+    this.audio.resumeBossMusic();
     this.ui.toastMsg('Boon gained — ' + boon.name);
     this.ui.update(0, this.ghost);
   }
@@ -515,6 +527,10 @@ export class Game {
       this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
       return;
     }
+
+    // a post-defeat boon waits here until we're safely back in plain play
+    // (not paused / respawning / mid-shift), so the reward is never dropped
+    if (this._boonPending) { this._openBoons(); return; }
 
     // hit-stop: freeze the action for a beat so blows land with weight
     if (this.hitstop > 0) {
