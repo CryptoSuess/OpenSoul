@@ -65,6 +65,14 @@ export const BOONS = [
     max: 2,
     apply(g) { g.resistMult *= 0.82; },
   },
+  {
+    id: 'leech',
+    name: 'Vampiric Haunt',
+    desc: '+120% SOUL leeched when you strike.',
+    icon: '❥',
+    max: 1, // a single decisive pick — stacking it with big heavies got degenerate
+    apply(g) { g.lifestealMult *= 2.2; },
+  },
 ];
 
 // Pick `n` distinct random boons to offer. `taken` is the run's list of chosen
