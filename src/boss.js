@@ -8,6 +8,29 @@ import { BOSSES, COMBAT } from './constants.js';
 
 const PREF_DIST = 210; // distance the boss tries to hold from the player
 
+// How each pattern's wind-up READS, so the player can tell what's coming:
+//  - 'aim'    a directional cone along aimAng (ranged shots; `spread` = arc half-width)
+//  - 'charge' a bold arrow along aimAng (the boss is about to lunge at you)
+//  - 'burst'  a ring blooming from the boss (radial / ground AoE)
+// The renderer draws the matching primitive during telegraphing; this is the
+// single source of truth both logic and rendering read from.
+export const TELEGRAPHS = {
+  aim:     { kind: 'aim',    spread: 0.0 },
+  spread3: { kind: 'aim',    spread: 0.30 },
+  spread5: { kind: 'aim',    spread: 0.50 },
+  homing:  { kind: 'aim',    spread: 0.55 },
+  beam:    { kind: 'aim',    spread: 0.12 },
+  slam:    { kind: 'charge', spread: 0.0 },
+  ring:    { kind: 'burst',  spread: 0.0 },
+  expand:  { kind: 'burst',  spread: 0.0 },
+  roots:   { kind: 'burst',  spread: 0.0 },
+};
+
+// The pattern a telegraphing boss is about to loose (so the wind-up can show it).
+export function upcomingPattern(b) {
+  return b.patterns[b.patternI % b.patterns.length];
+}
+
 // Build a guardian for an era id, positioned at (x, y) — its Anchor.
 export function makeBoss(eraId, x, y) {
   const cfg = BOSSES[eraId];
@@ -26,6 +49,8 @@ export function makeBoss(eraId, x, y) {
     lunge: null,
     hitFlash: 0,
     enraged: false,
+    aimAng: 0,       // direction to the player, tracked for telegraph visuals
+    phaseShift: 0,   // >0 during a phase-change beat: invulnerable, holds fire
   };
 }
 
@@ -116,6 +141,18 @@ function makeZone(x, y, r, color) {
 export function bossStep(b, dt, ghost, projectiles, world) {
   b.bob += dt;
   if (b.hitFlash > 0) b.hitFlash = Math.max(0, b.hitFlash - dt * 3);
+  // always face the player so telegraphs (and the next lunge/aim) read true
+  b.aimAng = Math.atan2(ghost.y - b.y, ghost.x - b.x);
+
+  // Phase-change beat: the guardian gathers itself — it hovers, holds fire, and
+  // is briefly invulnerable (the game clears hazards on entry). A clean breath
+  // that makes the difficulty step legible instead of a silent stat bump.
+  if (b.phaseShift > 0) {
+    b.phaseShift = Math.max(0, b.phaseShift - dt);
+    b.telegraphing = false;
+    b.lunge = null;
+    return;
+  }
 
   if (b.lunge) {
     b.x += b.lunge.vx * dt;
