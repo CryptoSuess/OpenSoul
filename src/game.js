@@ -65,6 +65,11 @@ export class Game {
     this.takenBoons = [];
     this.boonChoices = [];
     this._boonPending = false;
+    // run record: when it began (in game-time), how many times you scattered,
+    // and the elapsed time frozen the moment you win (excludes the cutscene).
+    this.runStart = 0;
+    this.runTime = 0;
+    this.deaths = 0;
     this.renderer.invalidateMinimap();
     this.ui.hideBoss();
     this.ui.setBoons(this.takenBoons); // clears the tray on a fresh run
@@ -100,6 +105,7 @@ export class Game {
     this.overlay.hide();
     this.ui.setHidden(false);
     this.state = STATE.PLAY;
+    this.runStart = this.time; // the clock starts when you wake into the world
     this.ui.toastMsg('You wake in ' + this.era.name);
     this.ui.showNarrative('You do not remember dying. You remember… almost everything else is gone.');
   }
@@ -124,6 +130,7 @@ export class Game {
   _beginEnding() {
     if (this.state === STATE.ENDING || this.state === STATE.WIN) return;
     this.state = STATE.ENDING;
+    this.runTime = this.time - this.runStart; // freeze the clock at the last anchor
     this.ui.setHidden(true);
     this.audio.stopBossMusic(); // never let a combat bed bleed into the ending
     this.audio.ending();
@@ -182,7 +189,8 @@ export class Game {
     this.audio.win();
     this.ui.setHidden(true);
     this.ui.hideEndingLine();
-    this.overlay.show(winHTML(this.ghost.fragments, ENDING_LINES, this.takenBoons));
+    this.overlay.show(winHTML(this.ghost.fragments, ENDING_LINES, this.takenBoons,
+      { time: this.runTime, deaths: this.deaths }));
   }
 
   _bindOverlayClicks(el) {
@@ -427,6 +435,7 @@ export class Game {
 
   _dissipate() {
     this.respawnT = 1.5;
+    this.deaths++; // counted for the run summary — death has weight, not a penalty
     this.charging = false; this.charge = 0;
     this.hitstop = Math.max(this.hitstop, 0.12);
     this.audio.hurt();
@@ -589,6 +598,7 @@ export class Game {
     this.particles.update(dt);
     this._collisions();
     this.ui.update(dt, this.ghost);
+    this.ui.setRunStats(this.time - this.runStart, this.deaths);
 
     this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
   }

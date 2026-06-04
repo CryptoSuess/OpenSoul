@@ -40,6 +40,11 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;
   font-size:15px;font-weight:700;text-shadow:0 1px 6px #000;}
 #frag-count{color:var(--gold);}
 #anchor-count{color:#9fc0ff;}
+/* run record: time adrift + times scattered */
+.stat-row.meta{margin-top:5px;font-size:12px;font-weight:600;opacity:.72;letter-spacing:.5px;}
+#run-clock{color:#cfe0ff;font-variant-numeric:tabular-nums;}
+#scatter-count{color:#e7b6b6;}
+#scatter-count.clean{color:#8fdca8;}
 
 /* persistent build tray — the boons you've gained this run */
 #boon-tray{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
@@ -162,6 +167,13 @@ button:active{transform:translateY(0);}
 .lore p{margin:6px 0;}
 .score{margin-top:14px;font-size:16px;}
 .score b{color:var(--gold);}
+/* run summary grid on the AT REST panel */
+.run-summary{display:flex;justify-content:center;gap:34px;margin:18px 0 6px;}
+.run-summary div{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.run-summary b{font-size:24px;font-weight:700;color:#eaf2ff;font-variant-numeric:tabular-nums;}
+.run-summary b.whole{color:var(--gold);text-shadow:0 0 18px rgba(255,230,160,.5);}
+.run-summary small{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;opacity:.6;}
+.epitaph{margin:16px 0 4px;font-style:italic;opacity:.85;font-size:14.5px;line-height:1.6;}
 
 /* ---------- Sound toggle ---------- */
 #sound{position:fixed;right:calc(18px + env(safe-area-inset-right));top:14px;width:40px;height:40px;padding:0;
