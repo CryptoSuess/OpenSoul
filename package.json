@@ -1,0 +1,14 @@
+{
+  "name": "opensoul",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A ghost adrift across the ruins of its own timeline — a zero-build static game.",
+  "scripts": {
+    "test": "node test/smoke.mjs",
+    "sim": "node test/sim.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}
