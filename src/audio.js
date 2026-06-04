@@ -187,9 +187,32 @@ export class Audio {
     const bm = this.bossMusic;
     if (bm.timer) { clearInterval(bm.timer); bm.timer = null; }
     bm.playing = false;
+    bm.suspended = false;
     if (!this.ctx) return;
     this.bossGain.gain.setTargetAtTime(0.0, this.ctx.currentTime, 0.4);
     this.droneGain.gain.setTargetAtTime(0.14, this.ctx.currentTime, 0.8); // restore ambience
+  }
+
+  // Pause/unpause the bed WITHOUT losing the fight's state (era, enrage
+  // intensity). Used by the pause menu and the boon picker so the driving
+  // combat track doesn't keep playing under a frozen game.
+  suspendBossMusic() {
+    const bm = this.bossMusic;
+    if (!bm.playing || bm.suspended) return;
+    bm.suspended = true;
+    if (bm.timer) { clearInterval(bm.timer); bm.timer = null; }
+    if (this.ctx) this.bossGain.gain.setTargetAtTime(0.0, this.ctx.currentTime, 0.15);
+  }
+
+  resumeBossMusic() {
+    const bm = this.bossMusic;
+    if (!bm.playing || !bm.suspended) return;
+    bm.suspended = false;
+    if (!this.ctx) return;
+    // pick the cadence up from now (the scheduler resyncs rather than catching up)
+    bm.nextTime = this.ctx.currentTime + 0.05;
+    this.bossGain.gain.setTargetAtTime(bm.intensity ? 0.16 : 0.12, this.ctx.currentTime, 0.2);
+    bm.timer = setInterval(() => this._bossScheduler(), 25);
   }
 
   // Lookahead: queue any steps that fall within the next ~120ms.

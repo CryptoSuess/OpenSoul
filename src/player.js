@@ -50,8 +50,8 @@ export class Ghost {
     this.phasing = wantPhase && (ax.x !== 0 || ax.y !== 0);
 
     // a dash briefly allows over-speed (it sets velocity directly in game.js);
-    // boons scale the drift/phase ceilings (not the dash cap)
-    const maxSpeed = this.dashT > 0 ? GHOST.dashSpeedCap
+    // every ceiling scales with speedMult so a dash always out-paces phase drift
+    const maxSpeed = this.dashT > 0 ? GHOST.dashSpeedCap * this.speedMult
       : this.phasing ? GHOST.phaseSpeed * this.speedMult : GHOST.maxSpeed * this.speedMult;
     this.vx += ax.x * GHOST.accel * dt;
     this.vy += ax.y * GHOST.accel * dt;

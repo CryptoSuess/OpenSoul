@@ -489,7 +489,7 @@ export class Renderer {
     const sx = ghost.x - (this.cam.x + this._sx);
     const sy = ghost.y - (this.cam.y + this._sy) + Math.sin(ghost.bob) * 3;
     const frac = ghost.maxEnergy > 0 ? ghost.energy / ghost.maxEnergy : 0;
-    const secsLeft = ghost.energy / GHOST.phaseDrain; // seconds of phasing left
+    const secsLeft = ghost.energy / (GHOST.phaseDrain * ghost.phaseDrainMult); // seconds of phasing left (Efficient Phase boon slows the drain)
     const urgent = secsLeft < 1.2;
     const col = urgent ? '#ff7a6b' : '#bfe0ff';
     ctx.save();
