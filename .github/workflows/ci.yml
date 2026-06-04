@@ -1,0 +1,30 @@
+# Runs the headless smoke test on every pull request (and on branch pushes), so
+# a regression in the core loop blocks the merge. `main` is intentionally
+# excluded — it's covered by pages.yml's deploy and we don't want a double run.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke test
+        run: npm test
