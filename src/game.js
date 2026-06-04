@@ -67,6 +67,7 @@ export class Game {
     this._boonPending = false;
     this.renderer.invalidateMinimap();
     this.ui.hideBoss();
+    this.ui.setBoons(this.takenBoons); // clears the tray on a fresh run
     this.audio.stopBossMusic(); // a restart must not leak the prior run's combat bed
     this.audio.setEra(this.eraIndex);
     this.ui.setEra(this.eraIndex);
@@ -181,7 +182,7 @@ export class Game {
     this.audio.win();
     this.ui.setHidden(true);
     this.ui.hideEndingLine();
-    this.overlay.show(winHTML(this.ghost.fragments, ENDING_LINES));
+    this.overlay.show(winHTML(this.ghost.fragments, ENDING_LINES, this.takenBoons));
   }
 
   _bindOverlayClicks(el) {
@@ -375,7 +376,7 @@ export class Game {
   _openBoons() {
     if (this.state !== STATE.PLAY) return; // opened only from the safe-play check
     this._boonPending = false;
-    this.boonChoices = pickBoons(3);
+    this.boonChoices = pickBoons(3, this.takenBoons);
     this.state = STATE.BOON;
     this.audio.suspendBossMusic(); // quiet any lingering combat bed under the picker
     this.overlay.show(boonHTML(this.boonChoices));
@@ -390,6 +391,7 @@ export class Game {
     this.overlay.hide();
     this.state = STATE.PLAY;
     this.audio.resumeBossMusic();
+    this.ui.setBoons(this.takenBoons);
     this.ui.toastMsg('Boon gained — ' + boon.name);
     this.ui.update(0, this.ghost);
   }
@@ -399,7 +401,7 @@ export class Game {
   _damage(amt) {
     const g = this.ghost;
     if (g.invuln > 0 || this.respawnT > 0) return;
-    g.energy = Math.max(0, g.energy - amt);
+    g.energy = Math.max(0, g.energy - amt * g.resistMult); // Iron Will softens every hit
     this.hurtFx = 1;
     if (g.energy <= 0 && this.boss && this.boss.state === 'active') this._dissipate();
   }

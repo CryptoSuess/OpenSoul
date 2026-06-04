@@ -2,6 +2,7 @@
 // focused on the world while crisp text/UI lives in HTML.
 
 import { ERAS, TOTAL_FRAGMENTS, ANCHORS_TO_WIN } from './constants.js';
+import { BOONS } from './boons.js';
 
 export class UI {
   constructor(root) {
@@ -22,6 +23,7 @@ export class UI {
             <span id="frag-count">✦ 0 / ${TOTAL_FRAGMENTS}</span>
             <span id="anchor-count">◆ 0 / ${ANCHORS_TO_WIN}</span>
           </div>
+          <div id="boon-tray" aria-label="boons gained"></div>
         </div>
         <div id="timeline"></div>
       </div>
@@ -39,6 +41,7 @@ export class UI {
     this.eraBlurb = this.root.querySelector('#era-blurb');
     this.fragCount = this.root.querySelector('#frag-count');
     this.anchorCount = this.root.querySelector('#anchor-count');
+    this.boonTray = this.root.querySelector('#boon-tray');
     this.timeline = this.root.querySelector('#timeline');
     this.toast = this.root.querySelector('#toast');
     this.narrative = this.root.querySelector('#narrative');
@@ -72,6 +75,22 @@ export class UI {
   markAnchor(eraIndex) {
     const pip = this.pips[eraIndex];
     if (pip) pip.classList.add('anchored');
+  }
+
+  // Persistent record of the build: one badge per distinct boon, with ×N when
+  // stacked. `taken` is the run's list of boon ids (as game.takenBoons). The
+  // last badge pulses briefly so a freshly-gained boon reads as "new".
+  setBoons(taken = []) {
+    if (!this.boonTray) return;
+    const order = BOONS.filter((b) => taken.includes(b.id));
+    this.boonTray.innerHTML = order.map((b) => {
+      const n = taken.filter((t) => t === b.id).length;
+      const stack = n > 1 ? `<i>×${n}</i>` : '';
+      return `<span class="boon-badge" title="${b.name} — ${b.desc.replace(/"/g, '')}">` +
+        `<b>${b.icon}</b>${stack}</span>`;
+    }).join('');
+    const last = this.boonTray.lastElementChild;
+    if (last) { void last.offsetWidth; last.classList.add('new'); }
   }
 
   // Boss health bar (top-centre) — shown only while a guardian is awake.
@@ -214,13 +233,21 @@ export function boonHTML(choices) {
     </div>`;
 }
 
-export function winHTML(fragments, lore) {
+export function winHTML(fragments, lore, taken = []) {
+  // recap the build you chose this run, mirroring the HUD badges
+  const order = BOONS.filter((b) => taken.includes(b.id));
+  const recap = order.length ? `
+      <div class="boon-recap">${order.map((b) => {
+        const n = taken.filter((t) => t === b.id).length;
+        return `<span class="boon-badge"><b>${b.icon}</b> ${b.name}${n > 1 ? `<i> ×${n}</i>` : ''}</span>`;
+      }).join('')}</div>` : '';
   return `
     <div class="panel win">
       <h1>AT REST</h1>
       <p class="tag">You gathered enough of yourself to forgive the rest.</p>
       <div class="lore">${lore.map(l => `<p>“${l}”</p>`).join('')}</div>
       <p class="score">Memories reclaimed: <b>${fragments} / ${TOTAL_FRAGMENTS}</b></p>
+      ${recap}
       <button id="restart-btn">WAKE AGAIN</button>
     </div>`;
 }
