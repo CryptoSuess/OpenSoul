@@ -4,6 +4,12 @@
 import { ERAS, TOTAL_FRAGMENTS, ANCHORS_TO_WIN } from './constants.js';
 import { BOONS } from './boons.js';
 
+// m:ss for the run clock and the end-screen summary.
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 export class UI {
   constructor(root) {
     this.root = root;
@@ -23,6 +29,10 @@ export class UI {
             <span id="frag-count">✦ 0 / ${TOTAL_FRAGMENTS}</span>
             <span id="anchor-count">◆ 0 / ${ANCHORS_TO_WIN}</span>
           </div>
+          <div class="stat-row meta">
+            <span id="run-clock" title="time adrift">0:00</span>
+            <span id="scatter-count" title="times scattered">⊘ 0</span>
+          </div>
           <div id="boon-tray" aria-label="boons gained"></div>
         </div>
         <div id="timeline"></div>
@@ -41,6 +51,8 @@ export class UI {
     this.eraBlurb = this.root.querySelector('#era-blurb');
     this.fragCount = this.root.querySelector('#frag-count');
     this.anchorCount = this.root.querySelector('#anchor-count');
+    this.runClock = this.root.querySelector('#run-clock');
+    this.scatterCount = this.root.querySelector('#scatter-count');
     this.boonTray = this.root.querySelector('#boon-tray');
     this.timeline = this.root.querySelector('#timeline');
     this.toast = this.root.querySelector('#toast');
@@ -91,6 +103,15 @@ export class UI {
     }).join('');
     const last = this.boonTray.lastElementChild;
     if (last) { void last.offsetWidth; last.classList.add('new'); }
+  }
+
+  // Live run record in the HUD: time adrift + how many times you've scattered.
+  setRunStats(seconds, deaths) {
+    if (this.runClock) this.runClock.textContent = fmtTime(seconds);
+    if (this.scatterCount) {
+      this.scatterCount.textContent = `⊘ ${deaths}`;
+      this.scatterCount.classList.toggle('clean', deaths === 0);
+    }
   }
 
   // Boss health bar (top-centre) — shown only while a guardian is awake.
@@ -233,7 +254,7 @@ export function boonHTML(choices) {
     </div>`;
 }
 
-export function winHTML(fragments, lore, taken = []) {
+export function winHTML(fragments, lore, taken = [], stats = {}) {
   // recap the build you chose this run, mirroring the HUD badges
   const order = BOONS.filter((b) => taken.includes(b.id));
   const recap = order.length ? `
@@ -241,13 +262,27 @@ export function winHTML(fragments, lore, taken = []) {
         const n = taken.filter((t) => t === b.id).length;
         return `<span class="boon-badge"><b>${b.icon}</b> ${b.name}${n > 1 ? `<i> ×${n}</i>` : ''}</span>`;
       }).join('')}</div>` : '';
+
+  // a quiet epitaph that gives the run shape — death has weight here, not a score
+  const deaths = stats.deaths || 0;
+  const whole = fragments >= TOTAL_FRAGMENTS;
+  const epitaph = deaths === 0
+    ? 'You crossed every age without once scattering. Unbroken.'
+    : deaths <= 3 ? 'You frayed at the edges, and held.'
+    : 'You came apart, and gathered, and went on. That is enough.';
+
   return `
     <div class="panel win">
       <h1>AT REST</h1>
       <p class="tag">You gathered enough of yourself to forgive the rest.</p>
       <div class="lore">${lore.map(l => `<p>“${l}”</p>`).join('')}</div>
-      <p class="score">Memories reclaimed: <b>${fragments} / ${TOTAL_FRAGMENTS}</b></p>
+      <div class="run-summary">
+        <div><b>${fmtTime(stats.time || 0)}</b><small>time adrift</small></div>
+        <div><b class="${whole ? 'whole' : ''}">${fragments} / ${TOTAL_FRAGMENTS}</b><small>memories</small></div>
+        <div><b class="${deaths === 0 ? 'whole' : ''}">${deaths}</b><small>${deaths === 1 ? 'time scattered' : 'times scattered'}</small></div>
+      </div>
       ${recap}
+      <p class="epitaph">${epitaph}${whole ? ' Every memory reclaimed.' : ''}</p>
       <button id="restart-btn">WAKE AGAIN</button>
     </div>`;
 }
