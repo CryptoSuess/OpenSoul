@@ -192,6 +192,7 @@ export const COMBAT = {
   hauntDmg: 13,        // base damage per haunt strike
   hauntCost: 5,        // SOUL spent per strike
   hauntCd: 0.30,       // seconds between strikes
+  hauntLifesteal: 0.15,// fraction of damage dealt returned as SOUL (the comeback lever)
   hauntRange: 110,     // strike reach (centre-to-centre, before boss radius)
   projDmg: 11,         // SOUL lost per bolt / homing hit
   ringDmg: 12,         // SOUL lost crossing an expanding ring

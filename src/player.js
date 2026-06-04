@@ -35,7 +35,8 @@ export class Ghost {
     this.phaseDrainMult = 1;
     this.regenMult = 1;
     this.dashCdMult = 1;
-    this.resistMult = 1; // <1 reduces SOUL lost to harm (Iron Will boon)
+    this.resistMult = 1;     // <1 reduces SOUL lost to harm (Iron Will boon)
+    this.lifestealMult = 1;  // scales SOUL leeched on a landed haunt (Vampiric Haunt boon)
   }
 
   update(dt, world, particles, accentRgb) {

@@ -273,6 +273,16 @@ export class Game {
         b.hp -= dmg;
         b.hitFlash = 1;
         hitBoss = true;
+        // lifesteal: a landed strike leeches a little SOUL back, so leaning into
+        // the fight (more so with Fiercer/Vampiric Haunt + reclaimed memories)
+        // pays for itself and pulls you out of a death-spiral
+        // …but a single hit can never refill more than a quarter of the pool,
+        // so even a fully-invested build can't facetank on huge heavies
+        const leech = Math.min(dmg * COMBAT.hauntLifesteal * g.lifestealMult, g.maxEnergy * 0.25);
+        if (leech > 0 && g.energy < g.maxEnergy) {
+          g.energy = Math.min(g.maxEnergy, g.energy + leech);
+          this.particles.burst(g.x, g.y, 5, [150, 240, 205], { speed: 70, life: 0.4, size: 2 });
+        }
         if (heavy) {
           const k = COMBAT.heavyKnockback / (d || 1);
           b.x += (b.x - g.x) * k * (1 / 60) * 6;
