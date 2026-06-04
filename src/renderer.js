@@ -2,7 +2,8 @@
 // color grading, fog, vignette and a ghostly bloom. Only visible tiles are
 // drawn so large worlds stay smooth.
 
-import { TILE, WORLD_W, WORLD_H, T, ERAS, GHOST } from './constants.js';
+import { TILE, WORLD_W, WORLD_H, T, ERAS, GHOST, COMBAT } from './constants.js';
+import { TELEGRAPHS, upcomingPattern } from './boss.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -379,6 +380,9 @@ export class Renderer {
     if (b.enraged) this._glow(sx, sy, R * 2.2, '#ff5a7a', 0.3);
     ctx.restore();
 
+    // attack telegraph: a per-pattern wind-up so the player can read and react
+    if (b.telegraphing && b.phaseShift <= 0 && !dormant) this._drawTelegraph(sx, sy, b);
+
     // body
     ctx.save();
     ctx.translate(sx, sy);
@@ -414,6 +418,75 @@ export class Renderer {
       ctx.ellipse(ex, -R * 0.12, R * 0.09, R * 0.16, 0, 0, 6.2832);
       ctx.fill();
     }
+    ctx.restore();
+
+    // phase-change flash: a bright shockwave on the "rally" beat
+    if (b.phaseShift > 0) this._drawPhaseShift(sx, sy, b, R);
+  }
+
+  // The wind-up visual for the attack a boss is about to loose. Shape comes from
+  // TELEGRAPHS[pattern]: a directional cone ('aim'), a lunge arrow ('charge'),
+  // or a blooming ring ('burst'). Intensity sharpens as firing nears.
+  _drawTelegraph(sx, sy, b) {
+    const tg = TELEGRAPHS[upcomingPattern(b)];
+    if (!tg) return;
+    const ctx = this.ctx;
+    const t = Math.min(1, b.teleT / COMBAT.teleTime); // 0..1 through the wind-up
+    const col = b.enraged ? '#ff6a86' : b.color;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (tg.kind === 'aim') {
+      const half = Math.max(0.06, tg.spread);
+      const L = 70 + t * 320;
+      ctx.translate(sx, sy);
+      ctx.rotate(b.aimAng);
+      const grad = ctx.createLinearGradient(0, 0, L, 0);
+      grad.addColorStop(0, this._withAlpha(col, 0.06 + t * 0.28));
+      grad.addColorStop(1, this._withAlpha(col, 0));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(half) * L, Math.sin(half) * L);
+      ctx.lineTo(Math.cos(-half) * L, Math.sin(-half) * L);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = this._withAlpha(col, 0.3 + t * 0.6);
+      ctx.lineWidth = 1 + t * 2.5;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(L, 0); ctx.stroke();
+    } else if (tg.kind === 'charge') {
+      const L = 60 + t * 300;
+      ctx.translate(sx, sy);
+      ctx.rotate(b.aimAng);
+      ctx.strokeStyle = this._withAlpha(col, 0.4 + t * 0.5);
+      ctx.lineWidth = 3 + t * 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(L, 0); ctx.stroke();
+      const hw = 14 + t * 18;
+      ctx.beginPath();
+      ctx.moveTo(L, 0); ctx.lineTo(L - hw, -hw);
+      ctx.moveTo(L, 0); ctx.lineTo(L - hw, hw);
+      ctx.stroke();
+    } else { // 'burst' — concentric rings blooming from the boss
+      const maxR = b.size * (1.4 + t * 2.2);
+      ctx.strokeStyle = this._withAlpha(col, 0.25 + t * 0.55);
+      ctx.lineWidth = 2 + t * 3;
+      ctx.beginPath(); ctx.arc(sx, sy, maxR, 0, 6.2832); ctx.stroke();
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(sx, sy, maxR * 0.6, 0, 6.2832); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _drawPhaseShift(sx, sy, b, R) {
+    const ctx = this.ctx;
+    const p = b.phaseShift / 0.9;       // 1 -> 0 across the beat
+    const grow = 1 - p;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    this._glow(sx, sy, R * (1.8 + grow * 1.6), b.enraged ? '#ff6a86' : b.color, 0.2 + 0.5 * p);
+    ctx.strokeStyle = this._withAlpha('#ffffff', 0.55 * p);
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(sx, sy, R + grow * R * 2.6, 0, 6.2832); ctx.stroke();
     ctx.restore();
   }
 

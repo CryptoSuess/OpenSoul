@@ -265,7 +265,7 @@ export class Game {
     const b = this.boss;
     let hitBoss = false;
     const range = COMBAT.hauntRange + (heavy ? 40 : 0);
-    if (b && b.state === 'active') {
+    if (b && b.state === 'active' && b.phaseShift <= 0) { // invulnerable mid phase-change
       const d = Math.hypot(b.x - g.x, b.y - g.y);
       if (d < range + b.size * 0.5) {
         let dmg = (COMBAT.hauntDmg + g.fragments * COMBAT.fragDmgBonus) * g.dmgMult;
@@ -282,7 +282,7 @@ export class Game {
         this.ui.showBoss(b.name, Math.max(0, b.hp / b.maxHp));
         this.hitstop = Math.max(this.hitstop, heavy ? 0.10 : 0.035);
         if (b.hp <= 0) this._defeatBoss(b);
-        else if (b.final && !b.enraged && b.hp / b.maxHp <= b.enrageAt) this._enrage(b);
+        else if (!b.enraged && b.enrageAt && b.hp / b.maxHp <= b.enrageAt) this._enrage(b);
       }
     }
 
@@ -327,12 +327,21 @@ export class Game {
     }
   }
 
+  // Phase change at half health: the guardian rallies. A brief invulnerable
+  // beat (b.phaseShift) clears the screen of hazards and signals the step up in
+  // intensity, then bossStep resumes with enraged cadence/movement. The final
+  // boss layers an extra bullet-storm on top (see bossStep), so it still reads
+  // as the hardest fight.
   _enrage(b) {
     b.enraged = true;
+    b.phaseShift = 0.9;
+    this.projectiles.length = 0; // wipe pending soul-fire so the breath is clean
     this.audio.bossWake();
     this.audio.enrageBossMusic();
-    this.renderer.addShake(10);
-    this.ui.toastMsg(b.name + ' will not be forgotten quietly…');
+    this.renderer.addShake(b.final ? 16 : 11);
+    this.particles.burst(b.x, b.y, b.final ? 60 : 40, hexToRgb(b.color), { speed: 240, life: 1.1, size: 4 });
+    this.ui.toastMsg(b.final ? b.name + ' will not be forgotten quietly…'
+                             : b.name + ' rallies — half-remembered and furious');
   }
 
   _defeatBoss(b) {
@@ -431,6 +440,7 @@ export class Game {
       b.x = b.hx; b.y = b.hy;
       b.enraged = false;
       b.telegraphing = false;
+      b.phaseShift = 0;
     }
     this.audio.stopBossMusic();
     this.ui.hideBoss();

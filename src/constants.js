@@ -220,9 +220,9 @@ export const COMBAT = {
 // One Guardian per era, keyed by era id. They gate each Anchor and escalate
 // in difficulty; THE FORGETTING is the multi-phase final boss.
 export const BOSSES = {
-  verdant:  { name: 'The Grove-Warden', hp: 80,  size: 44, color: '#8fffb0', speed: 36, fireEvery: 2.1, projSpeed: 150, patterns: ['slam', 'roots', 'spread3'],       wake: 270 },
-  stone:    { name: 'The Ember-Smith',  hp: 115, size: 40, color: '#ffd27f', speed: 48, fireEvery: 1.9, projSpeed: 195, patterns: ['aim', 'beam', 'spread3'],         wake: 270 },
-  sundering:{ name: 'The Pyre-Wraith',  hp: 150, size: 44, color: '#ff9a5a', speed: 60, fireEvery: 1.7, projSpeed: 205, patterns: ['ring', 'expand', 'aim'],          wake: 290 },
-  ruin:     { name: 'The Gravekeeper',  hp: 185, size: 46, color: '#9fe8ff', speed: 56, fireEvery: 1.6, projSpeed: 215, patterns: ['aim', 'homing', 'spread5'],       wake: 290 },
+  verdant:  { name: 'The Grove-Warden', hp: 80,  size: 44, color: '#8fffb0', speed: 36, fireEvery: 2.1, projSpeed: 150, patterns: ['slam', 'roots', 'spread3'],       wake: 270, enrageAt: 0.5 },
+  stone:    { name: 'The Ember-Smith',  hp: 115, size: 40, color: '#ffd27f', speed: 48, fireEvery: 1.9, projSpeed: 195, patterns: ['aim', 'beam', 'spread3'],         wake: 270, enrageAt: 0.5 },
+  sundering:{ name: 'The Pyre-Wraith',  hp: 150, size: 44, color: '#ff9a5a', speed: 60, fireEvery: 1.7, projSpeed: 205, patterns: ['ring', 'expand', 'aim'],          wake: 290, enrageAt: 0.5 },
+  ruin:     { name: 'The Gravekeeper',  hp: 185, size: 46, color: '#9fe8ff', speed: 56, fireEvery: 1.6, projSpeed: 215, patterns: ['aim', 'homing', 'spread5'],       wake: 290, enrageAt: 0.5 },
   hollow:   { name: 'THE FORGETTING',   hp: 300, size: 58, color: '#d59bff', speed: 64, fireEvery: 1.35,projSpeed: 230, patterns: ['spread5', 'expand', 'homing', 'ring'], wake: 330, final: true, enrageAt: 0.5 },
 };
