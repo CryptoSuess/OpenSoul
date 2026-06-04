@@ -60,6 +60,8 @@ export class Game {
     this.hitstop = 0;
     this.charge = 0;
     this.charging = false;
+    this._soulWasLow = false;
+    this._leechSndT = 0;
     this._ending = null;
     this.mapOpen = false;
     this.takenBoons = [];
@@ -280,8 +282,14 @@ export class Game {
         // so even a fully-invested build can't facetank on huge heavies
         const leech = Math.min(dmg * COMBAT.hauntLifesteal * g.lifestealMult, g.maxEnergy * 0.25);
         if (leech > 0 && g.energy < g.maxEnergy) {
+          const lowBefore = g.energy < g.maxEnergy * 0.6;
           g.energy = Math.min(g.maxEnergy, g.energy + leech);
           this.particles.burst(g.x, g.y, 5, [150, 240, 205], { speed: 70, life: 0.4, size: 2 });
+          // a soft sip — only when it matters (clawing back from low) and throttled
+          if (lowBefore && this.time - (this._leechSndT || 0) > 0.18) {
+            this.audio.lifesteal();
+            this._leechSndT = this.time;
+          }
         }
         if (heavy) {
           const k = COMBAT.heavyKnockback / (d || 1);
@@ -346,7 +354,7 @@ export class Game {
     b.enraged = true;
     b.phaseShift = 0.9;
     this.projectiles.length = 0; // wipe pending soul-fire so the breath is clean
-    this.audio.bossWake();
+    this.audio.bossEnrage();
     this.audio.enrageBossMusic();
     this.renderer.addShake(b.final ? 16 : 11);
     this.particles.burst(b.x, b.y, b.final ? 60 : 40, hexToRgb(b.color), { speed: 240, life: 1.1, size: 4 });
@@ -360,7 +368,7 @@ export class Game {
     this.projectiles.length = 0;
     this.hitstop = Math.max(this.hitstop, 0.18);
     this.audio.stopBossMusic();
-    this.audio.anchor();
+    this.audio.bossDefeat(); // the crumble; _awakenAnchor rings the anchor chime
     this.renderer.addShake(12);
     this.particles.burst(b.x, b.y, 70, hexToRgb(b.color), { speed: 240, life: 1.4, size: 4 });
     this.ui.hideBoss();
@@ -589,6 +597,12 @@ export class Game {
     this.particles.update(dt);
     this._collisions();
     this.ui.update(dt, this.ghost);
+
+    // warn (once) the instant SOUL falls into the danger zone — pairs with the
+    // pulsing bar so you feel the edge of dissipation coming
+    const lowNow = this.ghost.energy < this.ghost.maxEnergy * 0.25;
+    if (lowNow && !this._soulWasLow) this.audio.soulLow();
+    this._soulWasLow = lowNow;
 
     this.renderer.centerOn(this.ghost.x, this.ghost.y, this.world);
   }

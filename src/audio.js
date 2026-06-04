@@ -112,10 +112,32 @@ export class Audio {
     [523, 659, 784, 1046].forEach((f, i) =>
       setTimeout(() => this._blip(f, 0.8, 'sine', 0.2), i * 180));
   }
-  // Ominous low swell when a guardian wakes (or enrages).
+  // Ominous low swell when a guardian wakes.
   bossWake() {
     this._blip(70, 1.0, 'sawtooth', 0.22, 130);
     setTimeout(() => this._blip(98, 1.2, 'triangle', 0.18, 196), 90);
+  }
+  // Tense RISING stab when a guardian rallies at half health — distinct from the
+  // low wake swell so the phase change lands in the ears, not only the eyes.
+  bossEnrage() {
+    this._blip(160, 0.5, 'sawtooth', 0.20, 320);
+    setTimeout(() => this._blip(220, 0.4, 'square', 0.15, 440), 70);
+    setTimeout(() => this._blip(330, 0.6, 'triangle', 0.13, 660), 150); // dissonant shimmer up top
+  }
+  // A guardian crumbling: a downward collapse that resolves into a breath of
+  // release. Plays alongside the anchor chime (which still rings as it wakes).
+  bossDefeat() {
+    this._blip(330, 0.5, 'sawtooth', 0.20, 80);
+    setTimeout(() => this._blip(196, 0.7, 'triangle', 0.16, 70), 80);
+    setTimeout(() => this._blip(523.25, 0.9, 'sine', 0.13, 784), 260);
+  }
+  // Soft "sip" when a strike leeches SOUL back — gated to low-SOUL moments by the
+  // caller so it reinforces a comeback rather than chirping on every hit.
+  lifesteal() { this._blip(880, 0.16, 'sine', 0.07, 1320); }
+  // Quiet two-tone warning the instant SOUL drops into the danger zone.
+  soulLow() {
+    this._blip(330, 0.3, 'triangle', 0.11, 220);
+    setTimeout(() => this._blip(247, 0.4, 'sine', 0.09, 185), 90);
   }
   // Short dissonant thud when the ghost is struck.
   hurt() { this._blip(120, 0.22, 'square', 0.16, 50); }
