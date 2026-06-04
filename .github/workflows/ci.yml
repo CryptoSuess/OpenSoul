@@ -1,12 +1,12 @@
-# Runs the headless smoke test on every pull request (and on branch pushes), so
-# a regression in the core loop blocks the merge. `main` is intentionally
-# excluded — it's covered by pages.yml's deploy and we don't want a double run.
+# Runs the headless smoke test on every pull request, so a regression in the
+# core loop blocks the merge. Triggering on pull_request alone (not also push)
+# avoids the classic double-run — a same-repo PR branch would otherwise fire
+# both events. Use the manual trigger to run it on a branch without a PR.
 name: CI
 
 on:
   pull_request:
-  push:
-    branches-ignore: [main]
+  workflow_dispatch:
 
 jobs:
   smoke:
