@@ -41,6 +41,22 @@ html,body{margin:0;height:100%;overflow:hidden;background:#05060a;
 #frag-count{color:var(--gold);}
 #anchor-count{color:#9fc0ff;}
 
+/* persistent build tray — the boons you've gained this run */
+#boon-tray{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+#boon-tray:empty{display:none;}
+.boon-badge{display:inline-flex;align-items:center;gap:2px;height:24px;padding:0 7px;
+  border-radius:7px;background:rgba(150,200,255,.12);border:1px solid rgba(160,200,255,.28);
+  color:#dbe9ff;font-size:14px;line-height:1;text-shadow:0 1px 4px #000;cursor:default;}
+.boon-badge b{font-weight:400;}
+.boon-badge i{font-style:normal;font-size:11px;font-weight:700;opacity:.85;color:#fff;}
+.boon-badge.new{animation:boonPop .6s ease;}
+@keyframes boonPop{0%{transform:scale(.4);opacity:0;}
+  55%{transform:scale(1.18);}100%{transform:scale(1);opacity:1;}}
+/* build recap on the win panel — badges read left-to-right with the name shown */
+.boon-recap{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:4px 0 16px;}
+.boon-recap .boon-badge{height:26px;font-size:13px;}
+.boon-recap .boon-badge b{font-size:15px;margin-right:1px;}
+
 #timeline{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);
   display:flex;align-items:center;gap:0;}
 .pip{display:flex;flex-direction:column;align-items:center;width:96px;}

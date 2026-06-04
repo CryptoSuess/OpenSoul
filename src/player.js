@@ -35,6 +35,7 @@ export class Ghost {
     this.phaseDrainMult = 1;
     this.regenMult = 1;
     this.dashCdMult = 1;
+    this.resistMult = 1; // <1 reduces SOUL lost to harm (Iron Will boon)
   }
 
   update(dt, world, particles, accentRgb) {
